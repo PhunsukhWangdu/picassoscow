@@ -26,9 +26,13 @@ export default class ExcelTable extends React.Component {
 
   static getDerivedStateFromProps(props, state) {
     // if(deepEqual(state._preData, props.data)) return state;
-    console.log(ExcelData.forEachRecord(props.data.list))
+    // console.log(ExcelData.forEachRecord(props.data.list, { id: (record: any) => `test_id_${record.id}`}))
     return {
-      data: ExcelData.forEachRecord(props.data),
+      data: ExcelData.forEachRecord(
+        props.data.list, 
+        { id: (record: any) => `test_id_${record.id}`},
+        // record => { console.log(record, '测试构造数据回传 当前上下文使用')}
+        ),
       _preData: props.data,
     }
   }

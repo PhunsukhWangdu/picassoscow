@@ -6,6 +6,7 @@ interface IObject {
 }
 
 interface ExcelDataConfig {
+  data: Array<IObject>,
   aggregators: IObject, // 数据统计方法合集
   cols: Array<string>,
   rows: Array<string>,
@@ -134,6 +135,7 @@ export default class ExcelData {
   }
 
   static defaultProps = {
+    data: [],
     aggregators: aggregators, // 数据统计方法合集
     cols: [],
     rows: [],
@@ -146,7 +148,7 @@ export default class ExcelData {
     derivedAttributes: {},
   }
 
-  private config: ExcelDataConfig;
+  private props: ExcelDataConfig;
 
   private tree: object;
   private rowTotals: object;
@@ -160,14 +162,14 @@ export default class ExcelData {
   private sorted: boolean;
 
   constructor(props: ExcelDataConfig) {
-    this.config = Object.assign({}, ExcelData.defaultProps, props || {}), {
+    this.props = Object.assign({}, ExcelData.defaultProps, props || {}), {
       aggregators: { ...ExcelData.defaultProps.aggregators, ...(props.aggregators || {}) },
     };
 
-    const { aggregators, aggregatorName } = this.config;
+    const { aggregators, aggregatorName } = this.props;
 
     this.aggregator = aggregators[aggregatorName](
-      this.config.vals
+      this.props.vals
     );
     this.tree = {};
     this.rowKeys = [];
@@ -177,5 +179,70 @@ export default class ExcelData {
     this.allTotal = this.aggregator(this, [], []);
     this.sorted = false;
 
+    ExcelData.forEachRecord(
+      this.props.data,
+      this.props.derivedAttributes,
+      record => {
+        if (this.filter(record)) {
+          this.processRecord(record);
+        }
+      }
+    );
+
+  }
+
+  protected filter(record: IObject) {
+    for (const k in this.props.valueFilter) {
+      if (record[k] in this.props.valueFilter[k]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  protected processRecord(record: IObject) {
+    // this code is called in a tight loop
+    const colKey = [];
+    const rowKey = [];
+    for (const x of Array.from(this.props.cols)) {
+      colKey.push(x in record ? record[x] : 'null');
+    }
+    for (const x of Array.from(this.props.rows)) {
+      rowKey.push(x in record ? record[x] : 'null');
+    }
+    const flatRowKey = rowKey.join(String.fromCharCode(0));
+    const flatColKey = colKey.join(String.fromCharCode(0));
+
+    this.allTotal.push(record);
+
+    if (rowKey.length !== 0) {
+      if (!this.rowTotals[flatRowKey]) {
+        this.rowKeys.push(rowKey);
+        this.rowTotals[flatRowKey] = this.aggregator(this, rowKey, []);
+      }
+      this.rowTotals[flatRowKey].push(record);
+    }
+
+    if (colKey.length !== 0) {
+      if (!this.colTotals[flatColKey]) {
+        this.colKeys.push(colKey);
+        this.colTotals[flatColKey] = this.aggregator(this, [], colKey);
+      }
+      this.colTotals[flatColKey].push(record);
+    }
+
+    if (colKey.length !== 0 && rowKey.length !== 0) {
+      if (!this.tree[flatRowKey]) {
+        this.tree[flatRowKey] = {};
+      }
+      if (!this.tree[flatRowKey][flatColKey]) {
+        this.tree[flatRowKey][flatColKey] = this.aggregator(
+          this,
+          rowKey,
+          colKey
+        );
+      }
+      this.tree[flatRowKey][flatColKey].push(record);
+    }
   }
 }
