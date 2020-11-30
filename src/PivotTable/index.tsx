@@ -41,7 +41,7 @@ export default class App extends React.Component {
         {...config}
         data={exampleData.list}
         onChange={s => this.setState(s)}
-        renderers={Object.assign({}, TableRenderers, PlotlyRenderers)}
+        // renderers={Object.assign({}, TableRenderers, PlotlyRenderers)}
         {...this.state}
       />
     );

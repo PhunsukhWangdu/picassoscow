@@ -66,6 +66,7 @@ function makeRenderer(opts = {}) {
       tableOptions: {},
     }
     render() {
+      debugger
       const excelData = new ExcelData(this.props);
       const colAttrs = excelData.props.cols;
       const rowAttrs = excelData.props.rows;
@@ -73,9 +74,7 @@ function makeRenderer(opts = {}) {
       const rowKeys = excelData.getRowKeys();
 
       debugger
-      
-      console.log(colAttrs, rowAttrs, colKeys, rowKeys);
-      
+
       const grandTotalAggregator = excelData.getAggregator([], []);
 
       let valueCellColors = () => {};

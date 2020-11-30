@@ -81,7 +81,6 @@ const aggregators = (tpl => ({
 
 export default class ExcelData {
   static forEachRecord(data: any, derivedAttributes = {} as IObject, f = (a: any) => a) {
-    debugger
     // data原始数据, derivedAttributes需要对原始数据的key进行改造的方法，属性改造后再传入f, f对数据进行加工改造的方法
 
     if (!isArray(data)) return;
@@ -162,6 +161,7 @@ export default class ExcelData {
   private sorted: boolean;
 
   constructor(props: ExcelDataConfig) {
+    debugger
     this.props = Object.assign({}, ExcelData.defaultProps, props || {}), {
       aggregators: { ...ExcelData.defaultProps.aggregators, ...(props.aggregators || {}) },
     };
@@ -179,7 +179,6 @@ export default class ExcelData {
     this.allTotal = this.aggregator(this, [], []);
     this.sorted = false;
 
-    debugger
     ExcelData.forEachRecord(
       this.props.data,
       this.props.derivedAttributes,
@@ -189,7 +188,8 @@ export default class ExcelData {
         }
       }
     );
-
+    
+    console.log(this.rowKeys, this.colKeys)
   }
 
   protected filter(record: IObject) {
@@ -218,6 +218,7 @@ export default class ExcelData {
     const rowKey: string[] = [];
     Array.from(this.props.cols).forEach(
       col => {
+        debugger
         if(record[col]) colKey.push(record[col])
       }
     )

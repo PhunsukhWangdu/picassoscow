@@ -20,6 +20,7 @@ class ExcelTableCore extends React.PureComponent<ExcelTableCoreProps> {
   }
 
   render() {
+    debugger
     const Renderer = this.props.renderers[
       this.props.rendererName in this.props.renderers
         ? this.props.rendererName

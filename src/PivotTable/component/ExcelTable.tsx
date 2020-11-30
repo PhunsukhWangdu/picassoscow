@@ -112,7 +112,7 @@ export default class ExcelTable extends React.Component<ExcelTableProps, ExcelTa
       <div>
         <ExcelTableCore
           {...this.props}
-          data={this.state.materializedInput}
+          data={this.state.data}
         />
       </div>
     )
