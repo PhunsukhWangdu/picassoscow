@@ -29,13 +29,17 @@ export default class App extends React.Component {
 
   render() {
     const config = {
-      rows: ['property-a'],
+      rows: ['property-a', 'property-c'],
       cols: ['property-b'],
+      hiddenAttributes: [],
+      hiddenFromDragDrop: [],
+      aggregatorName: 'Count',
+      vals: ['property-a', 'property-b'],
     }
     return (
       <PivotTableUI
         {...config}
-        data={exampleData}
+        data={exampleData.list}
         onChange={s => this.setState(s)}
         renderers={Object.assign({}, TableRenderers, PlotlyRenderers)}
         {...this.state}

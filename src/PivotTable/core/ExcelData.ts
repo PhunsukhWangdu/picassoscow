@@ -5,15 +5,15 @@ interface IObject {
   [key: string]: any
 }
 
-interface ExcelDataConfig {
-  data: Array<IObject>,
+export interface ExcelDataConfig {
+  data: IObject[],
   aggregators: IObject, // 数据统计方法合集
-  cols: Array<string>,
-  rows: Array<string>,
-  vals: Array<string>,
+  cols: string[],
+  rows: string[],
+  vals: string[],
   aggregatorName: string,
   sorters: {},
-  valueFilter: {},
+  valueFilter: { [key: string]: string[] },
   rowOrder: "key_a_to_z" | "value_a_to_z" | "value_z_to_a",
   colOrder: "key_a_to_z" | "value_a_to_z" | "value_z_to_a",
   derivedAttributes: {},
@@ -148,11 +148,11 @@ export default class ExcelData {
     derivedAttributes: {},
   }
 
-  private props: ExcelDataConfig;
+  props: ExcelDataConfig;
 
-  private tree: object;
-  private rowTotals: object;
-  private colTotals: object;
+  private tree: IObject;
+  private rowTotals: IObject;
+  private colTotals: IObject;
 
   private rowKeys: any[];
   private colKeys: any[];
@@ -179,6 +179,7 @@ export default class ExcelData {
     this.allTotal = this.aggregator(this, [], []);
     this.sorted = false;
 
+    debugger
     ExcelData.forEachRecord(
       this.props.data,
       this.props.derivedAttributes,
@@ -192,35 +193,51 @@ export default class ExcelData {
   }
 
   protected filter(record: IObject) {
-    for (const k in this.props.valueFilter) {
-      if (record[k] in this.props.valueFilter[k]) {
-        return false;
+     // valueFilter=>{a: [1,2]} 过滤掉a为1或者2的原始数据
+    const { valueFilter } = this.props;  
+    Object.keys(this.props.valueFilter).forEach(
+      key => {
+        if (valueFilter[key].includes(record[key])) return false;
+        return true;
       }
-    }
+    )
     return true;
+  }
+
+  getColKeys() {
+    return this.colKeys;
+  }
+
+  getRowKeys() {
+    return this.rowKeys;
   }
 
   protected processRecord(record: IObject) {
     // this code is called in a tight loop
-    const colKey = [];
-    const rowKey = [];
-    for (const x of Array.from(this.props.cols)) {
-      colKey.push(x in record ? record[x] : 'null');
-    }
-    for (const x of Array.from(this.props.rows)) {
-      rowKey.push(x in record ? record[x] : 'null');
-    }
-    const flatRowKey = rowKey.join(String.fromCharCode(0));
+    const colKey: string[] = [];
+    const rowKey: string[] = [];
+    Array.from(this.props.cols).forEach(
+      col => {
+        if(record[col]) colKey.push(record[col])
+      }
+    )
+    Array.from(this.props.rows).forEach(
+      row => {
+        if(record[row]) rowKey.push(record[row])
+      }
+    )
+
+    const flatRowKey = rowKey.join(String.fromCharCode(0)); // 行有两个属性时[a,b]，值直接进行join {a:femal, b: 22} => femal222
     const flatColKey = colKey.join(String.fromCharCode(0));
 
-    this.allTotal.push(record);
+    this.allTotal.push(record, flatColKey);
 
-    if (rowKey.length !== 0) {
-      if (!this.rowTotals[flatRowKey]) {
-        this.rowKeys.push(rowKey);
+    if (rowKey.length !== 0) { // 行的属性值合并 femal222
+      if (!this.rowTotals[flatRowKey]) { // rowTotals { femal222:{},  femal333:{} }
+        this.rowKeys.push(rowKey); // rowKeys =>[[femal, 222], [femal, 333]]
         this.rowTotals[flatRowKey] = this.aggregator(this, rowKey, []);
       }
-      this.rowTotals[flatRowKey].push(record);
+      this.rowTotals[flatRowKey].push(record); // 这里的push是aggregator的方法
     }
 
     if (colKey.length !== 0) {
@@ -231,7 +248,7 @@ export default class ExcelData {
       this.colTotals[flatColKey].push(record);
     }
 
-    if (colKey.length !== 0 && rowKey.length !== 0) {
+    if (colKey.length !== 0 && rowKey.length !== 0) { // this.tree
       if (!this.tree[flatRowKey]) {
         this.tree[flatRowKey] = {};
       }
@@ -242,7 +259,7 @@ export default class ExcelData {
           colKey
         );
       }
-      this.tree[flatRowKey][flatColKey].push(record);
+      this.tree[flatRowKey][flatColKey].push(record); // 以row为key col为多维的key 构造横纵坐标都有的数据
     }
   }
 }
