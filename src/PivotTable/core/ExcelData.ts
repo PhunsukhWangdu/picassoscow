@@ -157,11 +157,13 @@ export default class ExcelData {
   private colKeys: any[];
   private allTotal: any[];
 
+  private rowFilterVals: IObject;
+  private colFilterVals: IObject;
+
   private aggregator: Function;
   private sorted: boolean;
 
-  constructor(props: ExcelDataConfig) {
-    debugger
+  constructor(props: ExcelDataConfig) {  
     this.props = Object.assign({}, ExcelData.defaultProps, props || {}), {
       aggregators: { ...ExcelData.defaultProps.aggregators, ...(props.aggregators || {}) },
     };
@@ -172,12 +174,15 @@ export default class ExcelData {
       this.props.vals
     );
     this.tree = {};
-    this.rowKeys = [];
+    this.rowKeys = []; // rowKeys =>[[femal, 222], [femal, 333]]
     this.colKeys = [];
-    this.rowTotals = {};
+    this.rowTotals = {}; // rowTotals { femal222:{...aggregator},  femal333:{} }
     this.colTotals = {};
     this.allTotal = this.aggregator(this, [], []);
     this.sorted = false;
+
+    this.rowFilterVals = {}; // { 国家：[中国] } row过滤数据
+    this.colFilterVals = {}; // { 国家：[中国] } col过滤数据
 
     ExcelData.forEachRecord(
       this.props.data,
@@ -212,13 +217,47 @@ export default class ExcelData {
     return this.rowKeys;
   }
 
+  getRowFilterVals() {
+    return this.rowFilterVals;
+  }
+
+  setFilterRowVals(row: string, vals: string[]) {
+    let filterVals = this.rowFilterVals[row] || [];
+    filterVals = Array.from(new Set([...filterVals, ...Array.from(vals)]));
+    this.rowFilterVals[row] = filterVals;
+  }
+
+  getAggregator(rowKey: string[], colKey: string[]) { // rowKey[property-a,  property-b] colKey[property-c]
+    let agg;
+    const flatRowKey = rowKey.join(String.fromCharCode(0));
+    const flatColKey = colKey.join(String.fromCharCode(0));
+    if (rowKey.length === 0 && colKey.length === 0) {
+      agg = this.allTotal;
+    } else if (rowKey.length === 0) {
+      agg = this.colTotals[flatColKey];
+    } else if (colKey.length === 0) {
+      agg = this.rowTotals[flatRowKey];
+    } else {
+      agg = this.tree[flatRowKey][flatColKey];
+    }
+    return (
+      agg || {
+        value() {
+          return null;
+        },
+        format() {
+          return '';
+        },
+      }
+    );
+  }
+
   protected processRecord(record: IObject) {
     // this code is called in a tight loop
     const colKey: string[] = [];
     const rowKey: string[] = [];
     Array.from(this.props.cols).forEach(
       col => {
-        debugger
         if(record[col]) colKey.push(record[col])
       }
     )
@@ -234,7 +273,7 @@ export default class ExcelData {
     this.allTotal.push(record, flatColKey);
 
     if (rowKey.length !== 0) { // 行的属性值合并 femal222
-      if (!this.rowTotals[flatRowKey]) { // rowTotals { femal222:{},  femal333:{} }
+      if (!this.rowTotals[flatRowKey]) { // rowTotals { femal222:{...aggregator},  femal333:{} }
         this.rowKeys.push(rowKey); // rowKeys =>[[femal, 222], [femal, 333]]
         this.rowTotals[flatRowKey] = this.aggregator(this, rowKey, []);
       }
