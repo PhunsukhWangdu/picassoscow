@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import ExcelData, { ExcelDataConfig } from '../core/ExcelData';
 import { Icon, Checkbox, Popover } from 'antd';
 import isFunction from 'lodash/isFunction';
+import isArray from 'lodash/isArray';
 
 interface TableRendererProps extends ExcelDataConfig {
   tableColorScaleGenerator: Function,
@@ -72,22 +73,35 @@ function makeRenderer(opts = {}) {
   const TableRenderer = (props: TableRendererProps) => {
 
     const [excelData, setExcelData] = React.useState(new ExcelData(props));
-    const [rowFilterVals, setRowFilterVals] = React.useState(excelData.getRowFilterVals());
+    const [colKeys, setColKeys] = React.useState(excelData.getColKeys());
+    const [rowKeys, setRowKeys] = React.useState(excelData.getRowKeys());
 
-    const colAttrs = excelData.props.cols;
-    const rowAttrs = excelData.props.rows;
-    const colKeys = excelData.getColKeys();
-    const rowKeys = excelData.getRowKeys();
+    console.log(excelData.getValueFilter())
 
+    const colAttrs = props.cols;
+    const rowAttrs = props.rows;
+    // const colKeys = excelData.getColKeys();
+    // const rowKeys = excelData.getRowKeys();
+
+    
     const grandTotalAggregator = excelData.getAggregator([], []);
 
-    let valueCellColors = () => { };
-    let rowTotalColors = () => { };
-    let colTotalColors = () => { };
+    let valueCellColors = (...args:any) => { return {} };
+    let rowTotalColors = (...args:any) => { return {} };
+    let colTotalColors = (...args:any) => { return {} };
 
     const filterPropertyValue = React.useCallback(
-      (val, key, cate = 'row') => {
-        excelData[cate === 'row' ? 'setFilterRowVals' : 'setFilterColVals'](key, val);
+      (val, key: string, checkable) => {
+        // 用useCallback 方法里永远拿不到新的state 只有dom里可以 所以excelData也是老的无法更新
+        debugger
+        // excelData[cate === 'row' ? 'setFilterRowVals' : 'setFilterColVals'](key, val);
+        // setValueFilter(Math.random())
+        // console.log(valueFilter)
+        excelData.setValueFilter(key, val, checkable)
+        setColKeys(excelData.getColKeys());
+        setRowKeys(excelData.getRowKeys());
+        console.log(excelData.getColKeys(), excelData.getRowKeys())
+
         // setRowFilterVals()
       },
       [],
@@ -95,21 +109,17 @@ function makeRenderer(opts = {}) {
 
     const renderPropertyList = React.useCallback(
       (list, key) => {
+        if(!isArray(list)) return null;
         return <div className="pvtLabelContent">
           {
             list.map(
-              val => <Checkbox onChange={() => filterPropertyValue(val, key, 'row')}>{val}</Checkbox>
+              val => <Checkbox onChange={e => filterPropertyValue(val, key, e.target.checked)}>{val}</Checkbox>
             )
           }
         </div>
       },
       [],
     );
-
-
-
-    console.log(rowFilterVals)
-
 
     // if (opts.heatmapMode) {
     //   const colorScaleGenerator = this.props.tableColorScaleGenerator;
@@ -158,6 +168,11 @@ function makeRenderer(opts = {}) {
         if(!isFunction(callback)) return;
 
         const filters = {};
+        colAttrs.forEach( // colAttrs有哪些列
+          (colattr, idx) => {
+            if(!colValues[idx]) return;
+          }
+        )
         for (const i of Object.keys(colAttrs || {})) {
           const attr = colAttrs[i];
           if (colValues[i] !== null) {
@@ -191,7 +206,7 @@ function makeRenderer(opts = {}) {
                   <th colSpan={rowAttrs.length} rowSpan={colAttrs.length} /> // 预留出来行的title位置
                 )}
                 <th className="pvtAxisLabel">
-                  <Popover content={renderPropertyList(colKeys.map(v => v[idx]), c)} placement="right">
+                  <Popover content={renderPropertyList(excelData.getAllKeyVals()[c], c)} placement="right">
                     <span>{c}<Icon type="menu-unfold" /></span>
                   </Popover>
                 </th>
@@ -229,13 +244,12 @@ function makeRenderer(opts = {}) {
               </tr>
             );
           })}
-
           {rowAttrs.length !== 0 && (
             <tr>
               {rowAttrs.map((r, i) => {
                 return (
                   <th className="pvtAxisLabel" key={`rowAttr${i}`}>
-                    <Popover content={renderPropertyList(rowKeys.map(v => v[i]), r)} placement="right">
+                    <Popover content={renderPropertyList(excelData.getAllKeyVals()[r], r)} placement="right">
                       <span>{r}<Icon type="menu-unfold" /></span>
                     </Popover>
                   </th>
@@ -247,7 +261,6 @@ function makeRenderer(opts = {}) {
             </tr>
           )}
         </thead>
-
         <tbody>
           {rowKeys.map((rowKey, i) => {
             const totalAggregator = excelData.getAggregator(rowKey, []);
@@ -274,15 +287,12 @@ function makeRenderer(opts = {}) {
                   );
                 })}
                 {colKeys.map(function (colKey, j) {
-                  const aggregator = excelData.getAggregator(rowKey, colKey);
+                  const aggregator = excelData.getAggregator(rowKey, colKey);// colKey[中国，盗卡] rowKey[8:00～9：00]
                   return (
                     <td
                       className="pvtVal"
                       key={`pvtVal${i}-${j}`}
-                      onClick={
-                        getClickHandler &&
-                        getClickHandler(aggregator.value(), rowKey, colKey)
-                      }
+                      onClick={getClickHandler(aggregator.value(), rowKey, colKey)}  // aggregator.value返回count总数
                       style={valueCellColors(
                         rowKey,
                         colKey,

@@ -153,9 +153,13 @@ export default class ExcelData {
   private rowTotals: IObject;
   private colTotals: IObject;
 
-  private rowKeys: any[];
-  private colKeys: any[];
+  private rowValGroups: any[];
+  private colValGroups: any[];
   private allTotal: any[];
+
+  private allKeyVals: IObject;
+
+  private valueFilter: IObject;
 
   private rowFilterVals: IObject;
   private colFilterVals: IObject;
@@ -168,53 +172,82 @@ export default class ExcelData {
       aggregators: { ...ExcelData.defaultProps.aggregators, ...(props.aggregators || {}) },
     };
 
-    const { aggregators, aggregatorName } = this.props;
+    const { aggregators, aggregatorName, valueFilter } = this.props;
 
     this.aggregator = aggregators[aggregatorName](
       this.props.vals
     );
+
     this.tree = {};
-    this.rowKeys = []; // rowKeys =>[[femal, 222], [femal, 333]]
-    this.colKeys = [];
+    this.rowValGroups = []; // rowValGroups =>[[femal, 222], [femal, 333]]
+    this.colValGroups = [];
     this.rowTotals = {}; // rowTotals { femal222:{...aggregator},  femal333:{} }
     this.colTotals = {};
+    this.allKeyVals = {}; // 所有的属性的值的合集
     this.allTotal = this.aggregator(this, [], []);
-    this.sorted = false;
+
+    this.valueFilter = valueFilter || {}; // { 国家：[中国] } row过滤数据
 
     this.rowFilterVals = {}; // { 国家：[中国] } row过滤数据
     this.colFilterVals = {}; // { 国家：[中国] } col过滤数据
 
+    this.updateKeys();
+  }
+
+  private updateKeys(refresh?: boolean) {
+    if(refresh) {
+      this.tree = {};
+      this.rowValGroups = []; // rowValGroups =>[[femal, 222], [femal, 333]]
+      this.colValGroups = [];
+      this.rowTotals = {}; // rowTotals { femal222:{...aggregator},  femal333:{} }
+      this.colTotals = {};
+      this.allTotal = this.aggregator(this, [], []);
+    }
+  
     ExcelData.forEachRecord(
       this.props.data,
       this.props.derivedAttributes,
       record => {
+        this.setAllKeyVals(record);
         if (this.filter(record)) {
           this.processRecord(record);
         }
       }
     );
-    
-    console.log(this.rowKeys, this.colKeys)
   }
 
   protected filter(record: IObject) {
-     // valueFilter=>{a: [1,2]} 过滤掉a为1或者2的原始数据
-    const { valueFilter } = this.props;  
-    Object.keys(this.props.valueFilter).forEach(
-      key => {
-        if (valueFilter[key].includes(record[key])) return false;
-        return true;
+     // valueFilter=>{a: [1,2]} 过滤掉a为1或者2的原始数据 
+    return !Object.keys(this.valueFilter).find(
+      key => this.valueFilter[key].includes(record[key])
+    )
+  }
+
+  protected setAllKeyVals(record: IObject) {
+    const allKeyVals = this.allKeyVals;
+    Object.keys(record).forEach(
+      (key:string) => {
+        allKeyVals[key] = Array.from(new Set([...(allKeyVals[key] || []), record[key]])) // Array.from+new Set去重
       }
     )
-    return true;
+    this.allKeyVals = allKeyVals;
+  }
+
+  getAllKeyVals() {
+    // 所有初始data的key的值的map {国家：{中国，美国}}
+    return this.allKeyVals;
+  }
+
+  getValueFilter() {
+    return this.valueFilter;
   }
 
   getColKeys() {
-    return this.colKeys;
+    return this.colValGroups;
   }
 
   getRowKeys() {
-    return this.rowKeys;
+    return this.rowValGroups;
   }
 
   getRowFilterVals() {
@@ -223,6 +256,16 @@ export default class ExcelData {
 
   getColFilterVals() {
     return this.colFilterVals;
+  }
+
+  setValueFilter(row: string, vals: string[], checkable: boolean) { // 行和列是拖拽组合 肯定不会有重复 所以过滤不需要区分行和列，按照属性过滤即可
+    let filterVals = this.valueFilter[row] || [];
+    filterVals = checkable ? 
+      Array.from(new Set([...filterVals, ...isArray(vals) ? vals : [ vals ]])) : //增加过滤
+      filterVals.filter((v: any) => v !== vals); //去掉已有的过滤
+    this.valueFilter[row] = filterVals;
+    console.log(filterVals.filter((v: any) => v!== vals), filterVals, vals)
+    this.updateKeys(true);
   }
 
   setFilterRowVals(row: string, vals: string[]) {
@@ -284,7 +327,7 @@ export default class ExcelData {
 
     if (rowKey.length !== 0) { // 行的属性值合并 femal222
       if (!this.rowTotals[flatRowKey]) { // rowTotals { femal222:{...aggregator},  femal333:{} }
-        this.rowKeys.push(rowKey); // rowKeys =>[[femal, 222], [femal, 333]]
+        this.rowValGroups.push(rowKey); // rowValGroups =>[[femal, 222], [femal, 333]]
         this.rowTotals[flatRowKey] = this.aggregator(this, rowKey, []);
       }
       this.rowTotals[flatRowKey].push(record); // 这里的push是aggregator的方法
@@ -292,7 +335,7 @@ export default class ExcelData {
 
     if (colKey.length !== 0) {
       if (!this.colTotals[flatColKey]) {
-        this.colKeys.push(colKey);
+        this.colValGroups.push(colKey);
         this.colTotals[flatColKey] = this.aggregator(this, [], colKey);
       }
       this.colTotals[flatColKey].push(record);
