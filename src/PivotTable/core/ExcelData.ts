@@ -221,10 +221,20 @@ export default class ExcelData {
     return this.rowFilterVals;
   }
 
+  getColFilterVals() {
+    return this.colFilterVals;
+  }
+
   setFilterRowVals(row: string, vals: string[]) {
     let filterVals = this.rowFilterVals[row] || [];
-    filterVals = Array.from(new Set([...filterVals, ...Array.from(vals)]));
+    filterVals = Array.from(new Set([...filterVals, ...isArray(vals) ? vals : [ vals ]]));
     this.rowFilterVals[row] = filterVals;
+  }
+
+  setFilterColVals(col: string, vals: string[]) {
+    let filterVals = this.colFilterVals[col] || [];
+    filterVals = Array.from(new Set([...filterVals, ...isArray(vals) ? vals : [ vals ]]));
+    this.colFilterVals[col] = filterVals;
   }
 
   getAggregator(rowKey: string[], colKey: string[]) { // rowKey[property-a,  property-b] colKey[property-c]
@@ -301,5 +311,24 @@ export default class ExcelData {
       }
       this.tree[flatRowKey][flatColKey].push(record); // 以row为key col为多维的key 构造横纵坐标都有的数据
     }
+  }
+
+  protected forEachMatchingRecord(criteria, callback) {
+    return ExcelData.forEachRecord(
+      this.props.data,
+      this.props.derivedAttributes,
+      record => {
+        if (!this.filter(record)) {
+          return;
+        }
+        for (const k in criteria) {
+          const v = criteria[k];
+          if (v !== (k in record ? record[k] : 'null')) {
+            return;
+          }
+        }
+        callback(record);
+      }
+    );
   }
 }

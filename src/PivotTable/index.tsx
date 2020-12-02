@@ -1,7 +1,7 @@
 import React from 'react';
 import PivotTableUI from './component/ExcelTable';
 import './pivottable.css';
-import 'antd/dist/antd.css'; 
+import 'antd/dist/antd.css';
 import TableRenderers from 'react-pivottable/TableRenderers';
 import Plot from 'react-plotly.js';
 import createPlotlyRenderers from 'react-pivottable/PlotlyRenderers';
@@ -31,11 +31,20 @@ export default class App extends React.Component {
   render() {
     const config = {
       rows: ['国家', '事件类型'],
-      cols: ['时间段','卡号'],
+      cols: ['时间段', '卡号'],
       hiddenAttributes: [],
       hiddenFromDragDrop: [],
       aggregatorName: 'Count',
       vals: ['property-a', 'property-b'],
+      tableOptions: {
+        clickCallback: function (e, value, filters, pivotData) {
+          var names = [];
+          pivotData.forEachMatchingRecord(filters, (record: object) => {
+            names.push(record['国家']);
+          });
+          alert(names.join('\n'));
+        },
+      },
     }
     return (
       <PivotTableUI
