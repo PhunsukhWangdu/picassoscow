@@ -259,8 +259,9 @@ export default class ExcelData {
   }
 
   setValueFilter(row: string, vals: string[], checkable: boolean) { // 行和列是拖拽组合 肯定不会有重复 所以过滤不需要区分行和列，按照属性过滤即可
+    // checkable=true 表示当前数据展示 false表示过滤掉数据
     let filterVals = this.valueFilter[row] || [];
-    filterVals = checkable ? 
+    filterVals = !checkable ? 
       Array.from(new Set([...filterVals, ...isArray(vals) ? vals : [ vals ]])) : //增加过滤
       filterVals.filter((v: any) => v !== vals); //去掉已有的过滤
     this.valueFilter[row] = filterVals;

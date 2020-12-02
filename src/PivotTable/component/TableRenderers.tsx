@@ -113,7 +113,7 @@ function makeRenderer(opts = {}) {
         return <div className="pvtLabelContent">
           {
             list.map(
-              val => <Checkbox onChange={e => filterPropertyValue(val, key, e.target.checked)}>{val}</Checkbox>
+              val => <Checkbox onChange={e => filterPropertyValue(val, key, e.target.checked)} defaultChecked>{val}</Checkbox>
             )
           }
         </div>
