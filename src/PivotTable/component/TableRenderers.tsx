@@ -82,16 +82,27 @@ function makeRenderer(opts: IObject = {}) {
     }
 
     const [excelData, setExcelData] = React.useState(new ExcelData(props));
-    const [colKeys, setColKeys] = React.useState(excelData.getColKeys());
-    const [rowKeys, setRowKeys] = React.useState(excelData.getRowKeys());
+    // const [colKeys, setColKeys] = React.useState(excelData.getColKeys());
+    // const [rowKeys, setRowKeys] = React.useState(excelData.getRowKeys());
 
     const colAttrs = props.cols;
     const rowAttrs = props.rows;
+    const colKeys = excelData.getColKeys();
+    const rowKeys = excelData.getRowKeys();
 
     React.useEffect(
       () => {
         props.onTableDidMount && props.onTableDidMount(excelData)
       }, []
+    )
+
+    React.useEffect(
+      () => {
+        // debugger
+        setExcelData(new ExcelData(props));
+        // setColKeys(excelData.getColKeys());
+        // setRowKeys(excelData.getRowKeys());
+      }, [props.cols, props.rows]
     )
    
     // const colKeys = excelData.getColKeys();
@@ -112,13 +123,13 @@ function makeRenderer(opts: IObject = {}) {
         // setValueFilter(Math.random())
         // console.log(valueFilter)
         excelData.setValueFilter(key, val, checkable)
-        setColKeys(excelData.getColKeys());
-        setRowKeys(excelData.getRowKeys());
-        console.log(excelData.getColKeys(), excelData.getRowKeys())
+        // setColKeys(excelData.getColKeys());
+        // setRowKeys(excelData.getRowKeys());
+        // console.log(excelData.getColKeys(), excelData.getRowKeys())
 
         // setRowFilterVals()
       },
-      [],
+      [], //props.cols, props.rows
     );
 
     const renderPropertyList = React.useCallback(
@@ -135,46 +146,46 @@ function makeRenderer(opts: IObject = {}) {
       [],
     );
 
-    if (opts.heatmapMode) {
-      const colorScaleGenerator = this.props.tableColorScaleGenerator;
-      const rowTotalValues = colKeys.map(x =>
-        excelData.getAggregator([], x).value()
-      );
-      rowTotalColors = colorScaleGenerator(rowTotalValues);
-      const colTotalValues = rowKeys.map(x =>
-        excelData.getAggregator(x, []).value()
-      );
-      colTotalColors = colorScaleGenerator(colTotalValues);
+    // if (opts.heatmapMode) {
+    //   const colorScaleGenerator = this.props.tableColorScaleGenerator;
+    //   const rowTotalValues = colKeys.map(x =>
+    //     excelData.getAggregator([], x).value()
+    //   );
+    //   rowTotalColors = colorScaleGenerator(rowTotalValues);
+    //   const colTotalValues = rowKeys.map(x =>
+    //     excelData.getAggregator(x, []).value()
+    //   );
+    //   colTotalColors = colorScaleGenerator(colTotalValues);
 
-      if (opts.heatmapMode === 'full') {
-        const allValues = [];
-        rowKeys.map(r =>
-          colKeys.map(c =>
-            allValues.push(excelData.getAggregator(r, c).value())
-          )
-        );
-        const colorScale = colorScaleGenerator(allValues);
-        valueCellColors = (r, c, v) => colorScale(v);
-      } else if (opts.heatmapMode === 'row') {
-        const rowColorScales = {};
-        rowKeys.map(r => {
-          const rowValues = colKeys.map(x =>
-            excelData.getAggregator(r, x).value()
-          );
-          rowColorScales[r] = colorScaleGenerator(rowValues);
-        });
-        valueCellColors = (r, c, v) => rowColorScales[r](v);
-      } else if (opts.heatmapMode === 'col') {
-        const colColorScales = {};
-        colKeys.map(c => {
-          const colValues = rowKeys.map(x =>
-            excelData.getAggregator(x, c).value()
-          );
-          colColorScales[c] = colorScaleGenerator(colValues);
-        });
-        valueCellColors = (r, c, v) => colColorScales[c](v);
-      }
-    }
+    //   if (opts.heatmapMode === 'full') {
+    //     const allValues = [];
+    //     rowKeys.map(r =>
+    //       colKeys.map(c =>
+    //         allValues.push(excelData.getAggregator(r, c).value())
+    //       )
+    //     );
+    //     const colorScale = colorScaleGenerator(allValues);
+    //     valueCellColors = (r, c, v) => colorScale(v);
+    //   } else if (opts.heatmapMode === 'row') {
+    //     const rowColorScales = {};
+    //     rowKeys.map(r => {
+    //       const rowValues = colKeys.map(x =>
+    //         excelData.getAggregator(r, x).value()
+    //       );
+    //       rowColorScales[r] = colorScaleGenerator(rowValues);
+    //     });
+    //     valueCellColors = (r, c, v) => rowColorScales[r](v);
+    //   } else if (opts.heatmapMode === 'col') {
+    //     const colColorScales = {};
+    //     colKeys.map(c => {
+    //       const colValues = rowKeys.map(x =>
+    //         excelData.getAggregator(x, c).value()
+    //       );
+    //       colColorScales[c] = colorScaleGenerator(colValues);
+    //     });
+    //     valueCellColors = (r, c, v) => colColorScales[c](v);
+    //   }
+    // }
 
     const getClickHandler = React.useCallback(
       (value, rowValues, colValues) => {

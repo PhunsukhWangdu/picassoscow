@@ -91,7 +91,7 @@ export default class ExcelTable extends React.Component<ExcelTableProps, ExcelTa
     return {
       data: ExcelData.forEachRecord(
         props.data,
-        { id: (record: any) => `test_id_${record.id}` },
+        //{ id: (record: any) => `test_id_${record.id}` }, // 构造原始数据使用 
         // record => { console.log(record, '测试构造数据回传 当前上下文使用')}
       ),
       _preData: props.data,
