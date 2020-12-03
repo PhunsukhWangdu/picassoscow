@@ -24,12 +24,12 @@ export default class App extends React.Component {
     super(props);
     this.state = {
       tableList: '',
-      rows: ['国家', '事件类型'],
+      rows: ['id', '国家', '事件类型'],
       cols: ['时间段', '卡号'],
       hiddenAttributes: [], // 从展示区域省略的属性
       hiddenFromDragDrop: [], // 从拖拽区域省略的属性
       aggregatorName: 'Count',
-      vals: ['property-a', 'property-b'],
+      vals: ['国家', '卡号'], // 属性名称用作聚合器的参数（获取传递给聚合器生成函数的值）
       tableOptions: {
         clickCallback: function (e, value, filters, pivotData) {
           var names = [];
@@ -39,6 +39,8 @@ export default class App extends React.Component {
           alert(names.join('\n'));
         },
       },
+      rowOrder: 'key_a_to_z',
+      colOrder: 'key_a_to_z',
     };
   }
 

@@ -83,7 +83,7 @@ export default class ExcelData {
   static forEachRecord(data: any, derivedAttributes = {} as IObject, f = (a: any) => a) {
     // data原始数据, derivedAttributes需要对原始数据的key进行改造的方法，属性改造后再传入f, f对数据进行加工改造的方法
 
-    if (!isArray(data)) return;
+    if (!isArray(data)) return [];
     // [[属性1，属性2], [value_属性1, value_属性2]] or [{ 属性1: value:属性1, 属性2: value_属性2 }] 后者为标准表格数据
 
     let addRecord: Function;
@@ -149,6 +149,8 @@ export default class ExcelData {
 
   props: ExcelDataConfig;
 
+  private formatData: IObject[];
+
   private tree: IObject;
   private rowTotals: IObject;
   private colTotals: IObject;
@@ -178,6 +180,7 @@ export default class ExcelData {
       this.props.vals
     );
 
+    this.formatData = [];
     this.tree = {};
     this.rowValGroups = []; // rowValGroups =>[[femal, 222], [femal, 333]]
     this.colValGroups = [];
@@ -204,7 +207,7 @@ export default class ExcelData {
       this.allTotal = this.aggregator(this, [], []);
     }
   
-    ExcelData.forEachRecord(
+    this.formatData = ExcelData.forEachRecord(
       this.props.data,
       this.props.derivedAttributes,
       record => {
@@ -231,6 +234,11 @@ export default class ExcelData {
       }
     )
     this.allKeyVals = allKeyVals;
+  }
+
+  getFormatData() {
+    // 所有初始data的key的值的map {国家：{中国，美国}}
+    return this.formatData;
   }
 
   getAllKeyVals() {

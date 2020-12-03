@@ -20,8 +20,6 @@ const ExcelTableCoreRender = (props: ExcelTableCoreProps) => {
     ...(props || {}),
   }
 
-  console.log(renderProps)
-
   const Renderer = renderProps.renderers[
     renderProps.rendererName in renderProps.renderers
       ? renderProps.rendererName

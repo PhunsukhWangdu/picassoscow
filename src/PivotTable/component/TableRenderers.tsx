@@ -12,6 +12,7 @@ interface IObject {
 interface TableRendererProps extends ExcelDataConfig {
   tableColorScaleGenerator: Function,
   tableOptions: IObject,
+  onTableDidMount: Function,
 }
 
 // helper function for setting row/col-span in TableRenderer
@@ -66,13 +67,19 @@ function redColorScaleGenerator(values) {
 }
 
 function makeRenderer(opts: IObject = {}) {
+
   const defaultProps = {
     ...ExcelData.defaultProps,
     tableColorScaleGenerator: redColorScaleGenerator,
     tableOptions: {},
   };
 
-  const TableRenderer = (props: TableRendererProps) => {
+  const TableRenderer = (cfg: TableRendererProps) => {
+
+    const props = {
+      ...defaultProps,
+      ...cfg,
+    }
 
     const [excelData, setExcelData] = React.useState(new ExcelData(props));
     const [colKeys, setColKeys] = React.useState(excelData.getColKeys());
@@ -81,7 +88,12 @@ function makeRenderer(opts: IObject = {}) {
     const colAttrs = props.cols;
     const rowAttrs = props.rows;
 
-    console.log(rowAttrs, 'rows')
+    React.useEffect(
+      () => {
+        props.onTableDidMount && props.onTableDidMount(excelData)
+      }, []
+    )
+   
     // const colKeys = excelData.getColKeys();
     // const rowKeys = excelData.getRowKeys();
 
@@ -115,7 +127,7 @@ function makeRenderer(opts: IObject = {}) {
         return <div className="pvtLabelContent">
           {
             list.map(
-              val => <Checkbox onChange={e => filterPropertyValue(val, key, e.target.checked)} defaultChecked>{val}</Checkbox>
+              (val, idx) => <Checkbox key={idx} onChange={e => filterPropertyValue(val, key, e.target.checked)} defaultChecked>{val}</Checkbox>
             )
           }
         </div>
