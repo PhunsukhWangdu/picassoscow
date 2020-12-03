@@ -11,22 +11,31 @@ interface ExcelTableCoreProps {
   renderers: { [key: string]: Function },
 }
 
-class ExcelTableCore extends React.PureComponent<ExcelTableCoreProps> {
 
-  static defaultProps = {
-    ...ExcelData.defaultProps,
-    rendererName: 'Table',
-    renderers: TableRenderers,
+
+const ExcelTableCoreRender = (props: ExcelTableCoreProps) => {
+  
+  const renderProps = {
+    ...ExcelTableCoreRender.defaultProps,
+    ...(props || {}),
   }
 
-  render() {
-    const Renderer = this.props.renderers[
-      this.props.rendererName in this.props.renderers
-        ? this.props.rendererName
-        : Object.keys(this.props.renderers)[0]
-    ];
-    return <Renderer {...this.props} />;
-  }
+  console.log(renderProps)
+
+  const Renderer = renderProps.renderers[
+    renderProps.rendererName in renderProps.renderers
+      ? renderProps.rendererName
+      : Object.keys(renderProps.renderers)[0]
+  ];
+  return (
+    <Renderer {...renderProps} />
+  )
+};
+
+ExcelTableCoreRender.defaultProps = {
+  ...ExcelData.defaultProps,
+  rendererName: 'Table',
+  renderers: TableRenderers,
 }
 
-export default ExcelTableCore;
+export default ExcelTableCoreRender;

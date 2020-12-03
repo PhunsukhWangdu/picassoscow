@@ -23,17 +23,11 @@ export default class App extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      tableList: ''
-    };
-  }
-
-
-  render() {
-    const config = {
+      tableList: '',
       rows: ['国家', '事件类型'],
       cols: ['时间段', '卡号'],
-      hiddenAttributes: [],
-      hiddenFromDragDrop: [],
+      hiddenAttributes: [], // 从展示区域省略的属性
+      hiddenFromDragDrop: [], // 从拖拽区域省略的属性
       aggregatorName: 'Count',
       vals: ['property-a', 'property-b'],
       tableOptions: {
@@ -45,12 +39,18 @@ export default class App extends React.Component {
           alert(names.join('\n'));
         },
       },
-    }
+    };
+  }
+
+
+  render() {
     return (
       <PivotTableUI
-        {...config}
         data={exampleData.list}
-        onChange={s => this.setState(s)}
+        onChange={s => {
+          console.log(s)
+          this.setState(s)
+        }}
         // renderers={Object.assign({}, TableRenderers, PlotlyRenderers)}
         {...this.state}
       />

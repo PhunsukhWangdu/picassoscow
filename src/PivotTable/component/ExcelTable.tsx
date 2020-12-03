@@ -5,6 +5,9 @@ import PivotTableUI from 'react-pivottable/PivotTableUI';
 import 'react-pivottable/pivottable.css';
 import TableRenderers from './TableRenderers';
 import ExcelTableCore from './ExcelTableCore';
+import Sortable, { ReactSortable } from 'react-sortablejs';
+import Draggable from 'react-draggable';
+import update from 'immutability-helper';
 import Plot from 'react-plotly.js';
 import createPlotlyRenderers from 'react-pivottable/PlotlyRenderers';
 
@@ -105,11 +108,61 @@ export default class ExcelTable extends React.Component<ExcelTableProps, ExcelTa
     });
   }
 
+  // 渲染
+  makeDnDCell(items, onChange, classes) {
+    return (
+      <ReactSortable //做属性row col拖拽
+        options={{
+          group: 'shared',
+          ghostClass: 'pvtPlaceholder',
+          filter: '.pvtFilterBox',
+          // preventOnFilter: false,
+        }}
+        tag="td"
+        className={classes}
+        // onChange={onChange}
+        list={items.map(v => ({id:v}))}
+        setList={(newState) => {
+          // console.log('1',newState)
+          onChange(newState.map(v => v.id))
+          // this.setState({ list: newState })
+        }}
+      >
+        {items.map(x => (
+         <div key={x}>{x}</div>
+        ))}
+      </ReactSortable>
+    );
+  }
+
+  sendPropUpdate(command: IObject) {
+    this.props.onChange(update(this.props, command));
+  }
+
+  propUpdater(key: string | number) {
+    return (value: any) => this.sendPropUpdate({[key]: {$set: value}});
+  }
+
   render() {
     const numValsAllowed = this.props.aggregators[this.props.aggregatorName]([])().numInputs || 0;
     this.props.aggregators[this.props.aggregatorName]([])().numInputs || 0;
+
+    console.log(this.props)
+    // 绘制左侧行属性 拖拽区域
+    const rowAttrs = this.props.rows.filter(
+      (row: string) =>
+        !this.props.hiddenAttributes.includes(row) &&
+        !this.props.hiddenFromDragDrop.includes(row)
+    );
+    const rowAttrsCell = this.makeDnDCell(
+      rowAttrs,
+      this.propUpdater('rows'),
+      'pvtAxisContainer pvtVertList pvtRows'
+    );
+
     return (
       <div>
+        {rowAttrsCell}
         <ExcelTableCore
           {...this.props}
           data={this.state.data}

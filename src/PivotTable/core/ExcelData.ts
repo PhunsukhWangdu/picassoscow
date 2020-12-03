@@ -265,7 +265,6 @@ export default class ExcelData {
       Array.from(new Set([...filterVals, ...isArray(vals) ? vals : [ vals ]])) : //增加过滤
       filterVals.filter((v: any) => v !== vals); //去掉已有的过滤
     this.valueFilter[row] = filterVals;
-    console.log(filterVals.filter((v: any) => v!== vals), filterVals, vals)
     this.updateKeys(true);
   }
 

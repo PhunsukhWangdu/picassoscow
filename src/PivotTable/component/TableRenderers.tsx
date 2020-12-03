@@ -5,11 +5,13 @@ import { Icon, Checkbox, Popover } from 'antd';
 import isFunction from 'lodash/isFunction';
 import isArray from 'lodash/isArray';
 
+interface IObject {
+  [key: string]: any
+}
+
 interface TableRendererProps extends ExcelDataConfig {
   tableColorScaleGenerator: Function,
-  tableOptions: {
-    [key: string]: any;
-  },
+  tableOptions: IObject,
 }
 
 // helper function for setting row/col-span in TableRenderer
@@ -63,7 +65,7 @@ function redColorScaleGenerator(values) {
   };
 }
 
-function makeRenderer(opts = {}) {
+function makeRenderer(opts: IObject = {}) {
   const defaultProps = {
     ...ExcelData.defaultProps,
     tableColorScaleGenerator: redColorScaleGenerator,
@@ -76,10 +78,10 @@ function makeRenderer(opts = {}) {
     const [colKeys, setColKeys] = React.useState(excelData.getColKeys());
     const [rowKeys, setRowKeys] = React.useState(excelData.getRowKeys());
 
-    console.log(excelData.getValueFilter())
-
     const colAttrs = props.cols;
     const rowAttrs = props.rows;
+
+    console.log(rowAttrs, 'rows')
     // const colKeys = excelData.getColKeys();
     // const rowKeys = excelData.getRowKeys();
 
@@ -121,46 +123,46 @@ function makeRenderer(opts = {}) {
       [],
     );
 
-    // if (opts.heatmapMode) {
-    //   const colorScaleGenerator = this.props.tableColorScaleGenerator;
-    //   const rowTotalValues = colKeys.map(x =>
-    //     excelData.getAggregator([], x).value()
-    //   );
-    //   rowTotalColors = colorScaleGenerator(rowTotalValues);
-    //   const colTotalValues = rowKeys.map(x =>
-    //     excelData.getAggregator(x, []).value()
-    //   );
-    //   colTotalColors = colorScaleGenerator(colTotalValues);
+    if (opts.heatmapMode) {
+      const colorScaleGenerator = this.props.tableColorScaleGenerator;
+      const rowTotalValues = colKeys.map(x =>
+        excelData.getAggregator([], x).value()
+      );
+      rowTotalColors = colorScaleGenerator(rowTotalValues);
+      const colTotalValues = rowKeys.map(x =>
+        excelData.getAggregator(x, []).value()
+      );
+      colTotalColors = colorScaleGenerator(colTotalValues);
 
-    //   if (opts.heatmapMode === 'full') {
-    //     const allValues = [];
-    //     rowKeys.map(r =>
-    //       colKeys.map(c =>
-    //         allValues.push(excelData.getAggregator(r, c).value())
-    //       )
-    //     );
-    //     const colorScale = colorScaleGenerator(allValues);
-    //     valueCellColors = (r, c, v) => colorScale(v);
-    //   } else if (opts.heatmapMode === 'row') {
-    //     const rowColorScales = {};
-    //     rowKeys.map(r => {
-    //       const rowValues = colKeys.map(x =>
-    //         excelData.getAggregator(r, x).value()
-    //       );
-    //       rowColorScales[r] = colorScaleGenerator(rowValues);
-    //     });
-    //     valueCellColors = (r, c, v) => rowColorScales[r](v);
-    //   } else if (opts.heatmapMode === 'col') {
-    //     const colColorScales = {};
-    //     colKeys.map(c => {
-    //       const colValues = rowKeys.map(x =>
-    //         excelData.getAggregator(x, c).value()
-    //       );
-    //       colColorScales[c] = colorScaleGenerator(colValues);
-    //     });
-    //     valueCellColors = (r, c, v) => colColorScales[c](v);
-    //   }
-    // }
+      if (opts.heatmapMode === 'full') {
+        const allValues = [];
+        rowKeys.map(r =>
+          colKeys.map(c =>
+            allValues.push(excelData.getAggregator(r, c).value())
+          )
+        );
+        const colorScale = colorScaleGenerator(allValues);
+        valueCellColors = (r, c, v) => colorScale(v);
+      } else if (opts.heatmapMode === 'row') {
+        const rowColorScales = {};
+        rowKeys.map(r => {
+          const rowValues = colKeys.map(x =>
+            excelData.getAggregator(r, x).value()
+          );
+          rowColorScales[r] = colorScaleGenerator(rowValues);
+        });
+        valueCellColors = (r, c, v) => rowColorScales[r](v);
+      } else if (opts.heatmapMode === 'col') {
+        const colColorScales = {};
+        colKeys.map(c => {
+          const colValues = rowKeys.map(x =>
+            excelData.getAggregator(x, c).value()
+          );
+          colColorScales[c] = colorScaleGenerator(colValues);
+        });
+        valueCellColors = (r, c, v) => colColorScales[c](v);
+      }
+    }
 
     const getClickHandler = React.useCallback(
       (value, rowValues, colValues) => {
@@ -363,4 +365,5 @@ function makeRenderer(opts = {}) {
 
 export default {
   Table: makeRenderer(),
+  'Table Heatmap': makeRenderer({heatmapMode: 'full'}),
 };
