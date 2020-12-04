@@ -130,7 +130,8 @@ export default class ExcelData {
       )
     }
 
-    return result;
+    console.log(result)
+    return result.filter(v => !!v);
   }
 
   static defaultProps = {
@@ -214,6 +215,7 @@ export default class ExcelData {
         this.setAllKeyVals(record);
         if (this.filter(record)) {
           this.processRecord(record);
+          return record;
         }
       }
     );
@@ -228,6 +230,7 @@ export default class ExcelData {
 
   protected setAllKeyVals(record: IObject) {
     const allKeyVals = this.allKeyVals;
+    if(!record) debugger
     Object.keys(record).forEach(
       (key:string) => {
         allKeyVals[key] = Array.from(new Set([...(allKeyVals[key] || []), record[key]])) // Array.from+new Set去重

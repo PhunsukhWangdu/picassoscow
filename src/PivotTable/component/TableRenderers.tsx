@@ -97,8 +97,17 @@ function makeRenderer(opts: IObject = {}) {
     }
 
     componentDidMount() {
-      const { excelData } = this.state;
-      this.props.onTableDidMount && this.props.onTableDidMount(excelData) //作didmount使用
+      // const { getContext } = this.props;
+      // debugger
+      // getContext && getContext({
+      //   getAllKeyVals: this.state.excelData.getAllKeyVals,
+      // })
+      // const { excelData } = this.state;
+      // this.props.onTableDidMount && this.props.onTableDidMount(excelData) //作didmount使用
+    }
+
+    getExcelDataInfo = () => {
+      return this.state.excelData;
     }
 
     static getDerivedStateFromProps(props: TableRendererProps, state: TableRendererProps) {
@@ -113,7 +122,7 @@ function makeRenderer(opts: IObject = {}) {
       }
     }
 
-   filterPropertyValue = (val, key: string, checkable) => {
+    filterPropertyValue = (val, key: string, checkable) => {
       const { excelData } = this.state;
       // 用useCallback 方法里永远拿不到新的state 只有dom里可以 所以excelData也是老的无法更新
       excelData.setValueFilter(key, val, checkable);
