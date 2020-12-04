@@ -289,14 +289,14 @@ export default class ExcelData {
     this.colFilterVals[col] = filterVals;
   }
 
-  getAggregator(rowKey: string[], colKey: string[]) { // rowKey[property-a,  property-b] colKey[property-c]
+  getAggregator(rowKey: string[], colKey: string[]) { // rowKey[femal,  222] colKey[femal, 333]
     let agg;
-    const flatRowKey = rowKey.join(String.fromCharCode(0));
+    const flatRowKey = rowKey.join(String.fromCharCode(0)); // femal222
     const flatColKey = colKey.join(String.fromCharCode(0));
     if (rowKey.length === 0 && colKey.length === 0) {
       agg = this.allTotal;
     } else if (rowKey.length === 0) {
-      agg = this.colTotals[flatColKey];
+      agg = this.colTotals[flatColKey]; // { femal222:{...aggregator},  femal333:{} }
     } else if (colKey.length === 0) {
       agg = this.rowTotals[flatRowKey];
     } else {

@@ -66,10 +66,22 @@ function redColorScaleGenerator(values: number[]) {
   const max = Math.max.apply(Math, values);
   return (x: number) => {
     // eslint-disable-next-line no-magic-numbers
-    const nonRed = 255 - Math.round((255 * (x - min)) / (max - min));
-    return { backgroundColor: `rgb(255,${nonRed},${nonRed})` };
+    const R = 255 - Math.round((255 * (x - min)) / (max - min));
+    const G = 255 - Math.round((123 * (x - min)) / (max - min));
+    //return { backgroundColor: `rgb(255,${nonRed},${nonRed})` };
+    return { backgroundColor: `rgb(${R},${G},255)` };
   };
 }
+
+// function redColorScaleGenerator(values: number[]) {
+//   const min = Math.min.apply(Math, values);
+//   const max = Math.max.apply(Math, values);
+//   return (x: number) => {
+//     // eslint-disable-next-line no-magic-numbers
+//     const nonRed = 255 - Math.round((255 * (x - min)) / (max - min));
+//     return { backgroundColor: `rgb(255,${nonRed},${nonRed})` };
+//   };
+// }
 
 function makeRenderer(opts: IObject = {}) {
 
@@ -119,7 +131,8 @@ function makeRenderer(opts: IObject = {}) {
       </div>
     }
 
-    getClickHandler = (value: any, rowValues: string[], colValues: string[]) => {
+    // 点击表格内容事件
+    getClickHandler = (value: any, rowValues: any[], colValues: any[]) => {
 
       const { excelData } = this.state;
       const { cols: colAttrs = [], rows: rowAttrs = [], tableOptions } = this.props;
@@ -157,8 +170,8 @@ function makeRenderer(opts: IObject = {}) {
     render() {
       const { excelData } = this.state;
 
-      const colAttrs = this.props.cols;
-      const rowAttrs = this.props.rows;
+      const colAttrs = this.props.cols || [];
+      const rowAttrs = this.props.rows || [];
       const colKeys = excelData.getColKeys();
       const rowKeys = excelData.getRowKeys();
 
@@ -169,46 +182,48 @@ function makeRenderer(opts: IObject = {}) {
       let colTotalColors = (...args: any) => { return {} };
 
 
-      // if (opts.heatmapMode) {
-      //   const colorScaleGenerator = this.props.tableColorScaleGenerator;
-      //   const rowTotalValues = colKeys.map(x =>
-      //     excelData.getAggregator([], x).value()
-      //   );
-      //   rowTotalColors = colorScaleGenerator(rowTotalValues);
-      //   const colTotalValues = rowKeys.map(x =>
-      //     excelData.getAggregator(x, []).value()
-      //   );
-      //   colTotalColors = colorScaleGenerator(colTotalValues);
+      if (opts.heatmapMode) {
+        const colorScaleGenerator = this.props.tableColorScaleGenerator;
+        // colKeys [[femal, 222], [femal, 333]]
+        const rowTotalValues = colKeys.map(x =>
+          excelData.getAggregator([], x).value() // 统计total行每个列col的统计值
+        );
+        rowTotalColors = colorScaleGenerator(rowTotalValues); // [1,2,22]
 
-      //   if (opts.heatmapMode === 'full') {
-      //     const allValues = [];
-      //     rowKeys.map(r =>
-      //       colKeys.map(c =>
-      //         allValues.push(excelData.getAggregator(r, c).value())
-      //       )
-      //     );
-      //     const colorScale = colorScaleGenerator(allValues);
-      //     valueCellColors = (r, c, v) => colorScale(v);
-      //   } else if (opts.heatmapMode === 'row') {
-      //     const rowColorScales = {};
-      //     rowKeys.map(r => {
-      //       const rowValues = colKeys.map(x =>
-      //         excelData.getAggregator(r, x).value()
-      //       );
-      //       rowColorScales[r] = colorScaleGenerator(rowValues);
-      //     });
-      //     valueCellColors = (r, c, v) => rowColorScales[r](v);
-      //   } else if (opts.heatmapMode === 'col') {
-      //     const colColorScales = {};
-      //     colKeys.map(c => {
-      //       const colValues = rowKeys.map(x =>
-      //         excelData.getAggregator(x, c).value()
-      //       );
-      //       colColorScales[c] = colorScaleGenerator(colValues);
-      //     });
-      //     valueCellColors = (r, c, v) => colColorScales[c](v);
-      //   }
-      // }
+        const colTotalValues = rowKeys.map(x =>
+          excelData.getAggregator(x, []).value() // 统计total列每个行row的统计值
+        );
+        colTotalColors = colorScaleGenerator(colTotalValues); // [1,2,22]
+
+        if (opts.heatmapMode === 'full') { // 全铺热力图
+          const allValues: number[] = [];
+          rowKeys.forEach(r =>
+            colKeys.forEach(c =>
+              allValues.push(excelData.getAggregator(r, c).value())
+            )
+          );
+          const colorScale = colorScaleGenerator(allValues); // 表格内 
+          valueCellColors = (r, c, v) => colorScale(v);
+        } else if (opts.heatmapMode === 'row') { // row热力图
+          const rowColorScales: IObject = {};
+          rowKeys.map(r => {
+            const rowValues = colKeys.map(x =>
+              excelData.getAggregator(r, x).value()
+            );
+            rowColorScales[r] = colorScaleGenerator(rowValues);
+          });
+          valueCellColors = (r, c, v) => rowColorScales[r](v);
+        } else if (opts.heatmapMode === 'col') { // col热力图
+          const colColorScales: IObject = {};
+          colKeys.map(c => {
+            const colValues = rowKeys.map(x =>
+              excelData.getAggregator(x, c).value()
+            );
+            colColorScales[c] = colorScaleGenerator(colValues);
+          });
+          valueCellColors = (r, c, v) => colColorScales[c](v);
+        }
+      }
 
       return (
         <table className="pvtTable">
@@ -281,7 +296,7 @@ function makeRenderer(opts: IObject = {}) {
               const totalAggregator = excelData.getAggregator(rowKey, []);
               return (
                 <tr key={`rowKeyRow${i}`}>
-                  {rowKey.map((txt, j) => {
+                  {rowKey.map((txt: string, j: number) => {
                     const x = spanSize(rowKeys, i, j);
                     if (x === -1) {
                       return null;
@@ -370,6 +385,6 @@ function makeRenderer(opts: IObject = {}) {
 }
 
 export default {
-  Table: makeRenderer(),
   'Table Heatmap': makeRenderer({ heatmapMode: 'full' }),
+  Table: makeRenderer(),
 };

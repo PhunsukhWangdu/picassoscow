@@ -59,7 +59,7 @@ const sortIcons: IObject = {
 
 export default class ExcelTableUI extends React.Component<ExcelTableProps, ExcelTableState> {
 
-  excelTableContentRef = React.createRef()
+  excelTableContentRef: React.RefObject<any> = React.createRef()
 
   attrValues = []
 
@@ -78,7 +78,7 @@ export default class ExcelTableUI extends React.Component<ExcelTableProps, Excel
     super(props);
     this.state = {
       _preData: this.props.data, // 传入数据
-      unusedOrder: [],
+      unusedOrder: [], // 储存未使用的属性的顺序
       zIndices: {}, // zIndex
       ...ExcelTableUI.materializeInput(props),
     };
@@ -104,7 +104,7 @@ export default class ExcelTableUI extends React.Component<ExcelTableProps, Excel
   }
 
   // 渲染属性拖拽区域
-  makeDnDCell(items: IObject[], onChange: Function, classes: string) {
+  makeDnDCell(items: any[], onChange: Function, classes: string) {
     return (
       <ReactSortable //做属性row col拖拽
         {
@@ -198,8 +198,7 @@ export default class ExcelTableUI extends React.Component<ExcelTableProps, Excel
   }
 
   getAllKeyVals = () => {
-    if(!this.excelTableContentRef.current) return {};
-    // console.log(this.excelTableContentRef.current.getAllKeyVals())
+    if(!this.excelTableContentRef || this.excelTableContentRef.current) return {};
     return this.excelTableContentRef.current.getAllKeyVals() || {};
   }
 
@@ -237,6 +236,7 @@ export default class ExcelTableUI extends React.Component<ExcelTableProps, Excel
     // 可拖拽属性列表合集
 
     const attrValues = this.state.attrValues;
+    
     const unusedAttrs = Object.keys(attrValues || {})
       .filter(
         e =>
@@ -244,22 +244,15 @@ export default class ExcelTableUI extends React.Component<ExcelTableProps, Excel
           !this.props.cols.includes(e) &&
           !this.props.hiddenAttributes.includes(e) &&
           !this.props.hiddenFromDragDrop.includes(e)
-      )
-      .sort(sort.sortAs(this.state.unusedOrder));
+      ).sort(sort.sortAs(this.state.unusedOrder || [])); // sort.sortAs(this.state.unusedOrder)
 
     const unusedLength = unusedAttrs.reduce((r, e) => r + e.length, 0);
     const horizUnused = unusedLength < this.props.unusedOrientationCutoff;
 
     const unusedAttrsCell = this.makeDnDCell(
       unusedAttrs,
-      order => {
-        console.log(order)
-        let attrValues = {};
-        order.forEach(
-          (item, i) => {attrValues[item] = i}
-        )
-        this.setState({ attrValues })
-        // this.setState({ unusedOrder: order })
+      (order: string[]) => {
+        this.setState({ unusedOrder: order })
       },
       `pvtAxisContainer pvtUnused ${horizUnused ? 'pvtHorizList' : 'pvtVertList'
       }`
