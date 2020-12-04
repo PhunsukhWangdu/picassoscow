@@ -7,16 +7,16 @@ interface IObject {
 
 export interface ExcelDataConfig {
   data: IObject[],
-  aggregators: IObject, // 数据统计方法合集
-  cols: string[],
-  rows: string[],
-  vals: string[],
-  aggregatorName: string,
-  sorters: {},
-  valueFilter: { [key: string]: string[] },
-  rowOrder: "key_a_to_z" | "value_a_to_z" | "value_z_to_a",
-  colOrder: "key_a_to_z" | "value_a_to_z" | "value_z_to_a",
-  derivedAttributes: {},
+  aggregators?: IObject, // 数据统计方法合集
+  cols?: string[],
+  rows?: string[],
+  vals?: string[],
+  aggregatorName?: string,
+  sorters?: {},
+  valueFilter?: { [key: string]: string[] },
+  rowOrder?: "key_a_to_z" | "value_a_to_z" | "value_z_to_a",
+  colOrder?: "key_a_to_z" | "value_a_to_z" | "value_z_to_a",
+  derivedAttributes?: {},
 }
 
 const addSeparators = function (nStr, thousandsSep, decimalSep) {
@@ -129,8 +129,6 @@ export default class ExcelData {
         }
       )
     }
-
-    console.log(result)
     return result.filter(v => !!v);
   }
 

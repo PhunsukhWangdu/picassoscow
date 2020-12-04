@@ -1,6 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import isObject from 'lodash/isObject';
+import omit from 'lodash/omit';
 import PivotTableUI from 'react-pivottable/PivotTableUI';
 import 'react-pivottable/pivottable.css';
 import TableRenderers from './TableRenderers';
@@ -33,8 +33,7 @@ interface ExcelTableProps {
   [key: string]: any,
 }
 interface ExcelTableState {
-  data: object[],
-  tableList: object[],
+  _preData: object[],
   materializedInput: object[],
   [key: string]: any,
 }
@@ -64,7 +63,6 @@ export default class ExcelTableUI extends React.Component<ExcelTableProps, Excel
 
   attrValues = []
 
-  // cfg: ExcelTableProps & { [key: string]: any };
   static defaultProps = {
     ...ExcelData.defaultProps,
     rendererName: 'Table',
@@ -76,16 +74,13 @@ export default class ExcelTableUI extends React.Component<ExcelTableProps, Excel
     menuLimit: 500,
   }
 
-  constructor(props: ExcelTableProps) {
+  constructor(props: ExcelTableProps & ExcelDataConfig) {
     super(props);
     this.state = {
-      tableList: [],
-      materializedInput: [], // 储存转化后符合标准的数据
       _preData: this.props.data, // 传入数据
-      attrValues: {}, // 数据所有key以及该对应值的原始数据map
       unusedOrder: [],
       zIndices: {}, // zIndex
-      ...ExcelTableUI.materializeInput(this.props),
+      ...ExcelTableUI.materializeInput(props),
     };
   }
 
@@ -103,25 +98,15 @@ export default class ExcelTableUI extends React.Component<ExcelTableProps, Excel
     // 还是需要单独处理一次data 因为render处理后data返回出发父组件更新时机不可控 同时data是不可变量，materializedInput和keyvals仅处理一次即可
     const excelData = new ExcelData(props);
     return {
-      attrValues: excelData.getAllKeyVals(),
-      materializedInput: excelData.getFormatData(),
+      attrValues: excelData.getAllKeyVals() || {}, // 数据所有key以及该对应值的原始数据map
+      materializedInput: excelData.getFormatData() || [], // 储存转化后符合标准的数据
     }
   }
 
   // 渲染属性拖拽区域
-  makeDnDCell(items, onChange, classes) {
-    //  console.log(items)
+  makeDnDCell(items: IObject[], onChange: Function, classes: string) {
     return (
       <ReactSortable //做属性row col拖拽
-        // multiDrag // enables mutidrag
-        // OR
-        // swap // enables swap
-        // options={{
-        //   group: 'shared',
-        //   ghostClass: 'pvtPlaceholder',
-        //   filter: '.pvtFilterBox',
-        //   preventOnFilter: false,
-        // }}
         {
         ...{
           group: 'shared',
@@ -132,13 +117,9 @@ export default class ExcelTableUI extends React.Component<ExcelTableProps, Excel
         }
         tag="td"
         className={classes}
-        // onChange={onChange}
         list={items.map(v => ({ id: v, selected: true }))}
         setList={(newState) => {
-          // console.log(classes, newState)
-          // debugger
           onChange(newState.map(v => v.id))
-          // this.setState({ list: newState })
         }}
       >
         {items.map((x, idx) => (
@@ -277,7 +258,7 @@ export default class ExcelTableUI extends React.Component<ExcelTableProps, Excel
         order.forEach(
           (item, i) => {attrValues[item] = i}
         )
-        // this.setState({ attrValues })
+        this.setState({ attrValues })
         // this.setState({ unusedOrder: order })
       },
       `pvtAxisContainer pvtUnused ${horizUnused ? 'pvtHorizList' : 'pvtVertList'
@@ -363,7 +344,7 @@ export default class ExcelTableUI extends React.Component<ExcelTableProps, Excel
                 openDropdown: this.isOpen(`val${i}`) ? false : `val${i}`,
               })
             }
-            setValue={value =>
+            setValue={(value: string) =>
               this.sendPropUpdate({
                 vals: { $splice: [[i, 1, value]] },
               })

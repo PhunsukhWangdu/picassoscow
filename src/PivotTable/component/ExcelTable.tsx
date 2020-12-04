@@ -1,18 +1,12 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import ExcelData from '../core/ExcelData';
+import ExcelData, { ExcelDataConfig } from '../core/ExcelData';
 import TableRenderers from './TableRenderers';
 
 /* eslint-disable react/prop-types */
 // eslint can't see inherited propTypes!
 
-interface ExcelTableCoreProps {
-  rendererName: string,
-  renderers: { [key: string]: Function },
-}
-
-
-const ExcelTableRender = (props: ExcelTableCoreProps, ref: React.Ref<any>) => {
+const ExcelTableRender = (props: ExcelDataConfig, ref: React.Ref<any>) => {
   const renderProps = {
     ...ExcelData.defaultProps,
     ...(props || {}),
@@ -34,7 +28,7 @@ const ExcelTableRender = (props: ExcelTableCoreProps, ref: React.Ref<any>) => {
   ];
 
   return (
-    <Renderer {...renderProps} ref={renderRef}/>
+    <Renderer {...renderProps} onRenderDidMount={renderRef}/>
   )
 };
 

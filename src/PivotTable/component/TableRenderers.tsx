@@ -4,6 +4,7 @@ import ExcelData, { ExcelDataConfig } from '../core/ExcelData';
 import { Icon, Checkbox, Popover } from 'antd';
 import isFunction from 'lodash/isFunction';
 import isArray from 'lodash/isArray';
+import { sort, deepEqual } from '../util';
 
 interface IObject {
   [key: string]: any
@@ -13,6 +14,10 @@ interface TableRendererProps extends ExcelDataConfig {
   tableColorScaleGenerator: Function,
   tableOptions: IObject,
   onTableDidMount: Function,
+}
+interface TableRendererState {
+  excelData: ExcelData,
+  [key: string]: any,
 }
 
 // helper function for setting row/col-span in TableRenderer
@@ -56,10 +61,10 @@ const spanSize = function (arr: string[], i: number, j: number) {
   return len;
 };
 
-function redColorScaleGenerator(values) {
+function redColorScaleGenerator(values: number[]) {
   const min = Math.min.apply(Math, values);
   const max = Math.max.apply(Math, values);
-  return x => {
+  return (x: number) => {
     // eslint-disable-next-line no-magic-numbers
     const nonRed = 255 - Math.round((255 * (x - min)) / (max - min));
     return { backgroundColor: `rgb(255,${nonRed},${nonRed})` };
@@ -68,14 +73,7 @@ function redColorScaleGenerator(values) {
 
 function makeRenderer(opts: IObject = {}) {
 
-  const defaultProps = {
-    ...ExcelData.defaultProps,
-    tableColorScaleGenerator: redColorScaleGenerator,
-    tableOptions: {},
-  };
-  
-
-  class TableRenderer extends React.Component<TableRendererProps> {
+  class TableRenderer extends React.Component<TableRendererProps, TableRendererState> {
 
     static defaultProps = {
       ...ExcelData.defaultProps,
@@ -83,56 +81,35 @@ function makeRenderer(opts: IObject = {}) {
       tableOptions: {},
     };
 
-    constructor(props) {
+    constructor(props: TableRendererProps) {
       super(props)
-      // this.excelData = new ExcelData(props);
-      // const colAttrs = props.cols;
-      // const rowAttrs = props.rows;
-      // const colKeys = excelData.getColKeys();
-      // const rowKeys = excelData.getRowKeys();
       this.state = {
         excelData: new ExcelData(this.props),
         _preProps: this.props,
       }
     }
 
-    componentDidMount() {
-      // const { getContext } = this.props;
-      // debugger
-      // getContext && getContext({
-      //   getAllKeyVals: this.state.excelData.getAllKeyVals,
-      // })
-      // const { excelData } = this.state;
-      // this.props.onTableDidMount && this.props.onTableDidMount(excelData) //作didmount使用
-    }
-
     getExcelDataInfo = () => {
       return this.state.excelData;
     }
 
-    static getDerivedStateFromProps(props: TableRendererProps, state: TableRendererProps) {
-      // if(deepEqual(state._preProps, props)) return state;
-      if(state._preProps === props) return state;
-
-      console.log('更新props')
-      // console.log(ExcelData.forEachRecord(props.data.list, { id: (record: any) => `test_id_${record.id}`}))
+    static getDerivedStateFromProps(props: TableRendererProps, state: TableRendererState) {
+      if (deepEqual(state._preProps, props)) return state;
       return {
         excelData: new ExcelData(props),
         _preProps: props,
       }
     }
 
-    filterPropertyValue = (val, key: string, checkable) => {
+    filterPropertyValue = (val: any, key: string, checkable: boolean) => {
       const { excelData } = this.state;
       // 用useCallback 方法里永远拿不到新的state 只有dom里可以 所以excelData也是老的无法更新
       excelData.setValueFilter(key, val, checkable);
       this.setState({})
-      // setRRR(excelData.getColKeys())
-      // setValueFilter(excelData.getValueFilter())
     }
 
-    renderPropertyList = (list, key) => {
-      if(!isArray(list)) return null;
+    renderPropertyList = (list: string[], key: any) => {
+      if (!isArray(list)) return null;
       return <div className="pvtLabelContent">
         {
           list.map(
@@ -142,41 +119,56 @@ function makeRenderer(opts: IObject = {}) {
       </div>
     }
 
-
-    render() {
-      // const [excelData, setExcelData] = React.useState(new ExcelData(props));
-      // const [valueFilter, setValueFilter] = React.useState(excelData.getValueFilter());
-      // const [rrr, setRRR] = React.useState(excelData.getColKeys());
+    getClickHandler = (value: any, rowValues: string[], colValues: string[]) => {
 
       const { excelData } = this.state;
-  
+      const { cols: colAttrs = [], rows: rowAttrs = [], tableOptions } = this.props;
+      const { clickCallback } = tableOptions || {};
+
+      if (!isFunction(clickCallback)) return;
+
+      const filters: IObject = {};
+      // colValues rowValues[[femal, 中国]， [male, 美国]]
+      colAttrs.forEach(
+        (attr, idx) => {
+          if(colValues[idx]) {
+            filters[attr] = colValues[idx];
+          }
+        }
+      )
+      rowAttrs.forEach(
+        (attr, idx) => {
+          if(rowValues[idx]) {
+            filters[attr] = rowValues[idx];
+          }
+        }
+      )
+
+      return (e: any) =>
+        this.props.tableOptions.clickCallback(
+          e,
+          value,
+          filters,
+          excelData
+        );
+    }
+
+
+    render() {
+      const { excelData } = this.state;
+
       const colAttrs = this.props.cols;
       const rowAttrs = this.props.rows;
       const colKeys = excelData.getColKeys();
       const rowKeys = excelData.getRowKeys();
-  
-      // React.useEffect(
-      //   () => {
-          
-      //   }, []
-      // )
-  
-      // React.useEffect(
-      //   () => {
-      //     setExcelData(new ExcelData(props));
-      //     setValueFilter(excelData.getValueFilter());
-      //   }, [props.cols, props.rows]
-      // )
-     
+
       const grandTotalAggregator = excelData.getAggregator([], []);
-  
-      let valueCellColors = (...args:any) => { return {} };
-      let rowTotalColors = (...args:any) => { return {} };
-      let colTotalColors = (...args:any) => { return {} };
-  
-      
-      
-  
+
+      let valueCellColors = (...args: any) => { return {} };
+      let rowTotalColors = (...args: any) => { return {} };
+      let colTotalColors = (...args: any) => { return {} };
+
+
       // if (opts.heatmapMode) {
       //   const colorScaleGenerator = this.props.tableColorScaleGenerator;
       //   const rowTotalValues = colKeys.map(x =>
@@ -187,7 +179,7 @@ function makeRenderer(opts: IObject = {}) {
       //     excelData.getAggregator(x, []).value()
       //   );
       //   colTotalColors = colorScaleGenerator(colTotalValues);
-  
+
       //   if (opts.heatmapMode === 'full') {
       //     const allValues = [];
       //     rowKeys.map(r =>
@@ -217,75 +209,9 @@ function makeRenderer(opts: IObject = {}) {
       //     valueCellColors = (r, c, v) => colColorScales[c](v);
       //   }
       // }
-  
-      // const getClickHandler = React.useCallback(
-      //   (value, rowValues, colValues) => {
-      //     const callback = props.tableOptions.clickCallback;
-      //     if(!isFunction(callback)) return;
-  
-      //     const filters = {};
-      //     colAttrs.forEach( // colAttrs有哪些列
-      //       (colattr, idx) => {
-      //         if(!colValues[idx]) return;
-      //       }
-      //     )
-      //     for (const i of Object.keys(colAttrs || {})) {
-      //       const attr = colAttrs[i];
-      //       if (colValues[i] !== null) {
-      //         filters[attr] = colValues[i];
-      //       }
-      //     }
-      //     for (const i of Object.keys(rowAttrs || {})) {
-      //       const attr = rowAttrs[i];
-      //       if (rowValues[i] !== null) {
-      //         filters[attr] = rowValues[i];
-      //       }
-      //     }
-      //     return e =>
-      //       callback(
-      //         e,
-      //         value,
-      //         filters,
-      //         excelData
-      //       );
-      //   },
-      //   [ this.props.tableOptions && this.props.tableOptions.clickCallback ]
-      // )
-      const getClickHandler = (value, rowValues, colValues) => {
-        const callback = this.props.tableOptions.clickCallback;
-        if(!isFunction(callback)) return;
 
-        const filters = {};
-        colAttrs.forEach( // colAttrs有哪些列
-          (colattr, idx) => {
-            if(!colValues[idx]) return;
-          }
-        )
-        for (const i of Object.keys(colAttrs || {})) {
-          const attr = colAttrs[i];
-          if (colValues[i] !== null) {
-            filters[attr] = colValues[i];
-          }
-        }
-        for (const i of Object.keys(rowAttrs || {})) {
-          const attr = rowAttrs[i];
-          if (rowValues[i] !== null) {
-            filters[attr] = rowValues[i];
-          }
-        }
-        return e =>
-          callback(
-            e,
-            value,
-            filters,
-            excelData
-          );
-      }
       return (
         <table className="pvtTable">
-          {/* <div>{JSON.stringify(rrr)}</div>
-          <div>{JSON.stringify(colKeys)}</div>
-          <div>{JSON.stringify(excelData.getColKeys())}</div> */}
           <thead>
             {colAttrs.map((c, idx) => { // colAttrs[国家，人数]
               // c 列属性, idx index
@@ -375,13 +301,13 @@ function makeRenderer(opts: IObject = {}) {
                       </th>
                     );
                   })}
-                  {colKeys.map(function (colKey, j) {
+                  {colKeys.map((colKey, j) => {
                     const aggregator = excelData.getAggregator(rowKey, colKey);// colKey[中国，盗卡] rowKey[8:00～9：00]
                     return (
                       <td
                         className="pvtVal"
                         key={`pvtVal${i}-${j}`}
-                        onClick={getClickHandler(aggregator.value(), rowKey, colKey)}  // aggregator.value返回count总数
+                        onClick={this.getClickHandler(aggregator.value(), rowKey, colKey)}  // aggregator.value返回count总数
                         style={valueCellColors(
                           rowKey,
                           colKey,
@@ -394,10 +320,7 @@ function makeRenderer(opts: IObject = {}) {
                   })}
                   <td
                     className="pvtTotal"
-                    onClick={
-                      getClickHandler &&
-                      getClickHandler(totalAggregator.value(), rowKey, [null])
-                    }
+                    onClick={this.getClickHandler(totalAggregator.value(), rowKey, [null])}
                     style={colTotalColors(totalAggregator.value())}
                   >
                     {totalAggregator.format(totalAggregator.value())}
@@ -405,7 +328,7 @@ function makeRenderer(opts: IObject = {}) {
                 </tr>
               );
             })}
-  
+
             <tr>
               <th
                 className="pvtTotalLabel"
@@ -413,29 +336,23 @@ function makeRenderer(opts: IObject = {}) {
               >
                 Totals
               </th>
-  
-              {colKeys.map(function (colKey, i) {
+
+              {colKeys.map( (colKey, i) => {
                 const totalAggregator = excelData.getAggregator([], colKey);
                 return (
                   <td
                     className="pvtTotal"
                     key={`total${i}`}
-                    onClick={
-                      getClickHandler &&
-                      getClickHandler(totalAggregator.value(), [null], colKey)
-                    }
+                    onClick={this.getClickHandler(totalAggregator.value(), [null], colKey)}
                     style={rowTotalColors(totalAggregator.value())}
                   >
                     {totalAggregator.format(totalAggregator.value())}
                   </td>
                 );
               })}
-  
+
               <td
-                onClick={
-                  getClickHandler &&
-                  getClickHandler(grandTotalAggregator.value(), [null], [null])
-                }
+                onClick={this.getClickHandler(grandTotalAggregator.value(), [null], [null])}
                 className="pvtGrandTotal"
               >
                 {grandTotalAggregator.format(grandTotalAggregator.value())}
@@ -444,7 +361,7 @@ function makeRenderer(opts: IObject = {}) {
           </tbody>
         </table>
       );
-  
+
     }
 
   }
@@ -454,5 +371,5 @@ function makeRenderer(opts: IObject = {}) {
 
 export default {
   Table: makeRenderer(),
-  'Table Heatmap': makeRenderer({heatmapMode: 'full'}),
+  'Table Heatmap': makeRenderer({ heatmapMode: 'full' }),
 };

@@ -50,7 +50,6 @@ export default class App extends React.Component {
       <ExcelTableUI
         data={exampleData.list}
         onChange={s => {
-          console.log(s)
           this.setState(s)
         }}
         // renderers={Object.assign({}, TableRenderers, PlotlyRenderers)}
