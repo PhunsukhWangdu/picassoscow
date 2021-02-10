@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "95lab",
+  "name": "picassoscow",
   "version": "1.0.0",
   "scripts": {
     "start": "dumi dev",
@@ -28,7 +28,10 @@
     ]
   },
   "dependencies": {
+    "@antv/g6": "^4.1.8",
+    "@sula-template/search-table": "^0.1.30",
     "antd": "^3.26.20",
+    "babylonjs": "^4.2.0",
     "prop-types": "^15.7.2",
     "react": "^16.12.0",
     "react-draggable": "^4.4.3",

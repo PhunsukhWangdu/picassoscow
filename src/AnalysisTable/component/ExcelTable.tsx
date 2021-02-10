@@ -1,25 +1,32 @@
 import React from 'react';
-import PropTypes from 'prop-types';
+import PropTypes, { any } from 'prop-types';
 import ExcelData, { ExcelDataConfig } from '../core/ExcelData';
 import TableRenderers from './TableRenderers';
 
 /* eslint-disable react/prop-types */
 // eslint can't see inherited propTypes!
+interface ExcelTableRenderProps extends ExcelDataConfig {
+  renderers: {
+    [key: string]: any,
+  }[],
+  rendererName: string,
+  [key: string]: any,
+}
 
-const ExcelTableRender = (props: ExcelDataConfig, ref: React.Ref<any>) => {
+const ExcelTableRender = (props: ExcelTableRenderProps, ref: React.Ref<any>) => {
   const renderProps = {
     ...ExcelData.defaultProps,
     ...(props || {}),
   }
 
-  const renderRef = React.useRef();
+  const renderRef = React.useRef({});
 
-  React.useImperativeHandle(ref, () => ({
-    getAllKeyVals: () => {
-      if(!renderRef.current.getExcelDataInfo || !renderRef.current.getExcelDataInfo()) return {};
-      return renderRef.current.getExcelDataInfo().getAllKeyVals();
-    }
-  }));
+  // React.useImperativeHandle(ref, () => ({
+  //   getAllKeyVals: () => {
+  //     if(!renderRef.current.getExcelDataInfo || !renderRef.current.getExcelDataInfo()) return {};
+  //     return renderRef.current.getExcelDataInfo().getAllKeyVals();
+  //   }
+  // }));
 
   const Renderer = renderProps.renderers[
     renderProps.rendererName in renderProps.renderers

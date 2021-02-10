@@ -80,16 +80,18 @@ export default class ExcelTableUI extends React.Component<ExcelTableProps, Excel
       _preData: this.props.data, // 传入数据
       unusedOrder: [], // 储存未使用的属性的顺序
       zIndices: {}, // zIndex
+      maxZIndex: 1000,
       ...ExcelTableUI.materializeInput(props),
     };
   }
 
   static getDerivedStateFromProps(props: ExcelTableProps, state: ExcelTableState) {
-    if(deepEqual(state._preData, props.data)) return state;
+    if (deepEqual(state._preData, props.data)) return state;
+    debugger
     // console.log(ExcelData.forEachRecord(props.data.list, { id: (record: any) => `test_id_${record.id}`}))
     return {
-     ...state,
-     ...this.materializeInput(props),
+      ...state,
+      ...this.materializeInput(props),
       _preData: props.data,
     }
   }
@@ -98,8 +100,10 @@ export default class ExcelTableUI extends React.Component<ExcelTableProps, Excel
     // 还是需要单独处理一次data 因为render处理后data返回出发父组件更新时机不可控 同时data是不可变量，materializedInput和keyvals仅处理一次即可
     const excelData = new ExcelData(props);
     return {
+      excelData,
       attrValues: excelData.getAllKeyVals() || {}, // 数据所有key以及该对应值的原始数据map
       materializedInput: excelData.getFormatData() || [], // 储存转化后符合标准的数据
+      valueFilter: excelData.getValueFilter() || [], // 过滤的key及值
     }
   }
 
@@ -126,11 +130,11 @@ export default class ExcelTableUI extends React.Component<ExcelTableProps, Excel
           <DraggableAttribute
             name={x}
             key={idx}
-            attrValues={this.state.attrValues[x]}
-            valueFilter={this.props.valueFilter[x] || {}}
-            sorter={sort.getSort(this.props.sorters, x)}
-            menuLimit={this.props.menuLimit}
-            setValuesInFilter={this.setValuesInFilter.bind(this)}
+            attrValues={this.state.attrValues[x]} // 该属性所有枚举值
+            valueFilter={this.state.valueFilter[x] || {}}
+            sorter={sort.getSort(this.props.sorters, x)} // sorter函数
+            menuLimit={this.props.menuLimit} // menu列表展示上限 超出不展示
+            setValuesInFilter={this.setValuesInFilter}
             addValuesToFilter={this.addValuesToFilter.bind(this)}
             moveFilterBoxToTop={this.moveFilterBoxToTop.bind(this)}
             removeValuesFromFilter={this.removeValuesFromFilter.bind(this)}
@@ -154,61 +158,85 @@ export default class ExcelTableUI extends React.Component<ExcelTableProps, Excel
     return this.state.openDropdown === dropdown;
   }
 
-  setValuesInFilter(attribute, values) {
-    this.sendPropUpdate({
+  setValuesInFilter = (attribute: string, values: string[]) => {
+    this.setState({
       valueFilter: {
-        [attribute]: {
-          $set: values.reduce((r, v) => {
-            r[v] = true;
-            return r;
-          }, {}),
-        },
-      },
-    });
+        ...this.state.valueFilter,
+        [attribute]: values
+      }
+    })
+    this.setState({
+      valueFilter: 222222
+    })
+
+    console.log({
+      valueFilter: {
+        ...this.state.valueFilter,
+        [attribute]: values
+      }
+    })
+    // this.sendPropUpdate({
+    //   valueFilter: {
+    //     [attribute]: {
+    //       $set: values.reduce((r, v) => {
+    //         r[v] = true;
+    //         return r;
+    //       }, {}),
+    //     },
+    //   },
+    // });
   }
 
-  addValuesToFilter(attribute, values) {
-    if (attribute in this.props.valueFilter) {
-      this.sendPropUpdate({
-        valueFilter: {
-          [attribute]: values.reduce((r, v) => {
-            r[v] = { $set: true };
-            return r;
-          }, {}),
-        },
-      });
-    } else {
-      this.setValuesInFilter(attribute, values);
-    }
+  addValuesToFilter = (attribute, values) => {
+    console.log(attribute, values,  this.state.valueFilter)
+
+    this.setState({
+      valueFilter: 222222
+    })
+
+//     if (attribute in this.state.valueFilter) {
+//       // this.setState({
+//       //   valueFilter: {
+//       //     ...this.state.valueFilter,
+//       //     [attribute]: [...(this.state.valueFilter[attribute] || []), ...values]
+//       //   }
+//       // })
+// console.log({
+//   valueFilter: {
+//     ...this.state.valueFilter,
+//     [attribute]: [...(this.state.valueFilter[attribute] || []), ...values]
+//   }
+// })
+//     } else {
+//       this.setValuesInFilter(attribute, values);
+//     }
   }
 
   removeValuesFromFilter(attribute, values) {
+    console.log(attribute, values)
     this.sendPropUpdate({
       valueFilter: { [attribute]: { $unset: values } },
     });
   }
 
-  moveFilterBoxToTop(attribute) {
-    this.setState(
-      update(this.state, {
-        maxZIndex: { $set: this.state.maxZIndex + 1 },
-        zIndices: { [attribute]: { $set: this.state.maxZIndex + 1 } },
-      })
-    );
+  moveFilterBoxToTop = (attribute) => {
+    // debugger
+    // this.setState(
+    //   update(this.state, {
+    //     maxZIndex: { $set: this.state.maxZIndex + 1 },
+    //     zIndices: { [attribute]: { $set: this.state.maxZIndex + 1 } },
+    //   })
+    // );
   }
 
-  getAllKeyVals = () => {
-    if(!this.excelTableContentRef || this.excelTableContentRef.current) return {};
-    return this.excelTableContentRef.current.getAllKeyVals() || {};
-  }
+  // getAllKeyVals = () => {
+  //   if (!this.excelTableContentRef || this.excelTableContentRef.current) return {};
+  //   return this.excelTableContentRef.current.getAllKeyVals() || {};
+  // }
 
   render() {
     const numValsAllowed = this.props.aggregators[this.props.aggregatorName]([])().numInputs || 0;
     this.props.aggregators[this.props.aggregatorName]([])().numInputs || 0; // 统计方法需要的入参选择
-
-    const aggregatorCellOutlet = this.props.aggregators[
-      this.props.aggregatorName
-    ]([])().outlet;
 
     // 展示方式切换
     const rendererName =
@@ -236,7 +264,7 @@ export default class ExcelTableUI extends React.Component<ExcelTableProps, Excel
     // 可拖拽属性列表合集
 
     const attrValues = this.state.attrValues;
-    
+
     const unusedAttrs = Object.keys(attrValues || {})
       .filter(
         e =>
@@ -345,9 +373,10 @@ export default class ExcelTableUI extends React.Component<ExcelTableProps, Excel
           />,
           i + 1 !== numValsAllowed ? <br key={`br${i}`} /> : null,
         ])}
-        {aggregatorCellOutlet && aggregatorCellOutlet(this.props.data)}
       </td>
     );
+
+    console.log(this.state.valueFilter, 'valueFilter')
 
     return (
       <table className="pvtUi">
@@ -366,6 +395,7 @@ export default class ExcelTableUI extends React.Component<ExcelTableProps, Excel
               {...this.props}
               ref={this.excelTableContentRef}
               data={this.state.materializedInput}
+              valueFilter={this.state.valueFilter}
             />
           </tr>
         </tbody>

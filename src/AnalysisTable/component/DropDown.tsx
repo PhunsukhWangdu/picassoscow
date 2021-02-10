@@ -25,7 +25,7 @@ export default (props: IObject) => {
 
       {props.open && (
         <div className="pvtDropdownMenu">
-          {props.values.map(r => (
+          {props.values.map((r: string) => (
             <div
               key={r}
               role="button"

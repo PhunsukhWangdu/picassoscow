@@ -15,6 +15,7 @@ interface DraggableAttributeProps {
   sorter: Function,
   menuLimit?: number,
   zIndex?: number,
+  setValuesInFilter: Function,
 }
 
 export default class DraggableAttribute extends React.Component<DraggableAttributeProps> {
@@ -51,13 +52,13 @@ export default class DraggableAttribute extends React.Component<DraggableAttribu
   }
 
   getFilterBox() {
-    const showMenu =
-      Object.keys(this.props.attrValues).length < this.props.menuLimit;
+    console.log(this.props.attrValues)
 
-    const values = Object.keys(this.props.attrValues);
-    const shown = values
-      .filter(this.matchesFilter.bind(this))
-      .sort(this.props.sorter);
+    const { menuLimit = 500, attrValues=[], sorter } = this.props;
+    
+    const showMenu = Object.keys(attrValues).length < menuLimit;
+
+    const shown = attrValues.filter(this.matchesFilter.bind(this)).sort(sorter);
 
     return (
       <Draggable handle=".pvtDragHandle">
@@ -98,13 +99,13 @@ export default class DraggableAttribute extends React.Component<DraggableAttribu
                 onClick={() =>
                   this.props.removeValuesFromFilter(
                     this.props.name,
-                    Object.keys(this.props.attrValues).filter(
+                    attrValues.filter(
                       this.matchesFilter.bind(this)
                     )
                   )
                 }
               >
-                Select {values.length === shown.length ? 'All' : shown.length}
+                Select {attrValues.length === shown.length ? 'All' : shown.length}
               </a>{' '}
               <a
                 role="button"
@@ -112,13 +113,13 @@ export default class DraggableAttribute extends React.Component<DraggableAttribu
                 onClick={() =>
                   this.props.addValuesToFilter(
                     this.props.name,
-                    Object.keys(this.props.attrValues).filter(
+                    Object.keys(attrValues).filter(
                       this.matchesFilter.bind(this)
                     )
                   )
                 }
               >
-                Deselect {values.length === shown.length ? 'All' : shown.length}
+                Deselect {attrValues.length === shown.length ? 'All' : shown.length}
               </a>
             </p>
           )}
@@ -162,14 +163,14 @@ export default class DraggableAttribute extends React.Component<DraggableAttribu
           {this.props.name}
           <span
             className="pvtTriangle"
-            // onClick={this.toggleFilterBox.bind(this)}
+            onClick={this.toggleFilterBox.bind(this)}
           >
             {' '}
             ▾
           </span>
         </span>
 
-        {/* {this.state.open ? this.getFilterBox() : null} */}
+        {this.state.open ? this.getFilterBox() : null}
       </li>
     );
   }

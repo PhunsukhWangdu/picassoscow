@@ -5,6 +5,7 @@ import { Icon, Checkbox, Popover } from 'antd';
 import isFunction from 'lodash/isFunction';
 import isArray from 'lodash/isArray';
 import { sort, deepEqual } from '../util';
+import colorScaleGenerator from '../plugins/colorScaleGenerator';
 
 interface IObject {
   [key: string]: any
@@ -61,35 +62,13 @@ const spanSize = function (arr: string[], i: number, j: number) {
   return len;
 };
 
-function redColorScaleGenerator(values: number[]) {
-  const min = Math.min.apply(Math, values);
-  const max = Math.max.apply(Math, values);
-  return (x: number) => {
-    // eslint-disable-next-line no-magic-numbers
-    const R = 255 - Math.round((255 * (x - min)) / (max - min));
-    const G = 255 - Math.round((123 * (x - min)) / (max - min));
-    //return { backgroundColor: `rgb(255,${nonRed},${nonRed})` };
-    return { backgroundColor: `rgb(${R},${G},255)` };
-  };
-}
-
-// function redColorScaleGenerator(values: number[]) {
-//   const min = Math.min.apply(Math, values);
-//   const max = Math.max.apply(Math, values);
-//   return (x: number) => {
-//     // eslint-disable-next-line no-magic-numbers
-//     const nonRed = 255 - Math.round((255 * (x - min)) / (max - min));
-//     return { backgroundColor: `rgb(255,${nonRed},${nonRed})` };
-//   };
-// }
-
 function makeRenderer(opts: IObject = {}) {
 
   class TableRenderer extends React.Component<TableRendererProps, TableRendererState> {
 
     static defaultProps = {
       ...ExcelData.defaultProps,
-      tableColorScaleGenerator: redColorScaleGenerator,
+      tableColorScaleGenerator: colorScaleGenerator.blue,
       tableOptions: {},
     };
 
@@ -206,11 +185,11 @@ function makeRenderer(opts: IObject = {}) {
           valueCellColors = (r, c, v) => colorScale(v);
         } else if (opts.heatmapMode === 'row') { // row热力图
           const rowColorScales: IObject = {};
-          rowKeys.map(r => {
+          rowKeys.forEach(r => {
             const rowValues = colKeys.map(x =>
               excelData.getAggregator(r, x).value()
             );
-            rowColorScales[r] = colorScaleGenerator(rowValues);
+            rowColorScales[r] = colorScaleGenerator(rowValues); // r为index 为每一行生成对应的颜色函数
           });
           valueCellColors = (r, c, v) => rowColorScales[r](v);
         } else if (opts.heatmapMode === 'col') { // col热力图
@@ -219,7 +198,7 @@ function makeRenderer(opts: IObject = {}) {
             const colValues = rowKeys.map(x =>
               excelData.getAggregator(x, c).value()
             );
-            colColorScales[c] = colorScaleGenerator(colValues);
+            colColorScales[c] = colorScaleGenerator(colValues); // c为index 为每一列生成对应的颜色函数
           });
           valueCellColors = (r, c, v) => colColorScales[c](v);
         }
@@ -353,7 +332,7 @@ function makeRenderer(opts: IObject = {}) {
               </th>
 
               {colKeys.map( (colKey, i) => {
-                const totalAggregator = excelData.getAggregator([], colKey);
+                const totalAggregator = excelData.getAggregator([], colKey); // {count: 0, push() { this.count++;}, value() {return this.count;}, format: formatter,}
                 return (
                   <td
                     className="pvtTotal"
@@ -385,6 +364,8 @@ function makeRenderer(opts: IObject = {}) {
 }
 
 export default {
+  'Table Col Heatmap': makeRenderer({heatmapMode: 'col'}),
+  'Table Row Heatmap': makeRenderer({heatmapMode: 'row'}),
   'Table Heatmap': makeRenderer({ heatmapMode: 'full' }),
   Table: makeRenderer(),
 };

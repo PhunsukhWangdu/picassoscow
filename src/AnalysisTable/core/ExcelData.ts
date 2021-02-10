@@ -7,7 +7,7 @@ interface IObject {
 
 export interface ExcelDataConfig {
   data: IObject[],
-  aggregators?: IObject, // 数据统计方法合集
+  aggregators?: IObject[], // 数据统计方法合集
   cols?: string[],
   rows?: string[],
   vals?: string[],
@@ -72,11 +72,37 @@ const aggregatorTemplates = {
         };
       };
   },
+  uniques(fn: Function, formatter = usFmtInt) {
+    return function([attr]) {
+      return function() {
+        return {
+          uniq: [],
+          push(record) {
+            if (!Array.from(this.uniq).includes(record[attr])) {
+              this.uniq.push(record[attr]);
+            }
+          },
+          value() {
+            return fn(this.uniq);
+          },
+          format: formatter,
+          numInputs: typeof attr !== 'undefined' ? 0 : 1,
+        };
+      };
+    };
+  },
+  listUnique(s) {
+    return aggregatorTemplates.uniques(
+      x => x.join(s),
+      x => x
+    );
+  }
 };
 
 // default aggregators & renderers use US naming and number formatting
 const aggregators = (tpl => ({
   Count: tpl.count(usFmtInt),
+  'List Unique Values': tpl.listUnique(', '),
 }))(aggregatorTemplates);
 
 export default class ExcelData {
@@ -168,12 +194,12 @@ export default class ExcelData {
   private aggregator: Function;
   private sorted: boolean;
 
-  constructor(props: ExcelDataConfig) {  
+  constructor(props: ExcelDataConfig) {
     this.props = Object.assign({}, ExcelData.defaultProps, props || {}), {
       aggregators: { ...ExcelData.defaultProps.aggregators, ...(props.aggregators || {}) },
     };
 
-    const { aggregators, aggregatorName, valueFilter } = this.props;
+    const { aggregators = [], aggregatorName = 'Count', valueFilter } = this.props;
 
     this.aggregator = aggregators[aggregatorName](
       this.props.vals
@@ -197,7 +223,7 @@ export default class ExcelData {
   }
 
   private updateKeys(refresh?: boolean) {
-    if(refresh) {
+    if (refresh) {
       this.tree = {};
       this.rowValGroups = []; // rowValGroups =>[[femal, 222], [femal, 333]]
       this.colValGroups = [];
@@ -205,7 +231,7 @@ export default class ExcelData {
       this.colTotals = {};
       this.allTotal = this.aggregator(this, [], []);
     }
-  
+
     this.formatData = ExcelData.forEachRecord(
       this.props.data,
       this.props.derivedAttributes,
@@ -220,7 +246,7 @@ export default class ExcelData {
   }
 
   protected filter(record: IObject) {
-     // valueFilter=>{a: [1,2]} 过滤掉a为1或者2的原始数据 
+    // valueFilter=>{a: [1,2]} 过滤掉a为1或者2的原始数据 
     return !Object.keys(this.valueFilter).find(
       key => this.valueFilter[key].includes(record[key])
     )
@@ -228,9 +254,9 @@ export default class ExcelData {
 
   protected setAllKeyVals(record: IObject) {
     const allKeyVals = this.allKeyVals;
-    if(!record) debugger
+    if (!record) debugger
     Object.keys(record).forEach(
-      (key:string) => {
+      (key: string) => {
         allKeyVals[key] = Array.from(new Set([...(allKeyVals[key] || []), record[key]])) // Array.from+new Set去重
       }
     )
@@ -270,8 +296,8 @@ export default class ExcelData {
   setValueFilter(row: string, vals: string[], checkable: boolean) { // 行和列是拖拽组合 肯定不会有重复 所以过滤不需要区分行和列，按照属性过滤即可
     // checkable=true 表示当前数据展示 false表示过滤掉数据
     let filterVals = this.valueFilter[row] || [];
-    filterVals = !checkable ? 
-      Array.from(new Set([...filterVals, ...isArray(vals) ? vals : [ vals ]])) : //增加过滤
+    filterVals = !checkable ?
+      Array.from(new Set([...filterVals, ...isArray(vals) ? vals : [vals]])) : //增加过滤
       filterVals.filter((v: any) => v !== vals); //去掉已有的过滤
     this.valueFilter[row] = filterVals;
     this.updateKeys(true);
@@ -279,13 +305,13 @@ export default class ExcelData {
 
   setFilterRowVals(row: string, vals: string[]) {
     let filterVals = this.rowFilterVals[row] || [];
-    filterVals = Array.from(new Set([...filterVals, ...isArray(vals) ? vals : [ vals ]]));
+    filterVals = Array.from(new Set([...filterVals, ...isArray(vals) ? vals : [vals]]));
     this.rowFilterVals[row] = filterVals;
   }
 
   setFilterColVals(col: string, vals: string[]) {
     let filterVals = this.colFilterVals[col] || [];
-    filterVals = Array.from(new Set([...filterVals, ...isArray(vals) ? vals : [ vals ]]));
+    filterVals = Array.from(new Set([...filterVals, ...isArray(vals) ? vals : [vals]]));
     this.colFilterVals[col] = filterVals;
   }
 
@@ -318,14 +344,14 @@ export default class ExcelData {
     // this code is called in a tight loop
     const colKey: string[] = [];
     const rowKey: string[] = [];
-    Array.from(this.props.cols).forEach(
+    Array.from(this.props.cols || []).forEach(
       col => {
-        if(record[col]) colKey.push(record[col])
+        if (record[col]) colKey.push(record[col])
       }
     )
-    Array.from(this.props.rows).forEach(
+    Array.from(this.props.rows || []).forEach(
       row => {
-        if(record[row]) rowKey.push(record[row])
+        if (record[row]) rowKey.push(record[row])
       }
     )
 
@@ -346,6 +372,18 @@ export default class ExcelData {
       if (!this.colTotals[flatColKey]) {
         this.colValGroups.push(colKey);
         this.colTotals[flatColKey] = this.aggregator(this, [], colKey);
+        // this.colTotals[flatColKey] ===> function() {
+        //   return {
+        //     count: 0,
+        //     push() {
+        //       this.count++;
+        //     },
+        //     value() {
+        //       return this.count;
+        //     },
+        //     format: formatter,
+        //   };
+        // };
       }
       this.colTotals[flatColKey].push(record);
     }
