@@ -13,6 +13,10 @@ import G6 from '@antv/g6';
 //     }
 //   `);
 
+interface IObject {
+  [key: string]: any;
+}
+
 // 默认配置
 const defaultConfig = {
   modes: {
@@ -241,7 +245,7 @@ const colors = {
   G: '#5BD8A6',
   DI: '#A7A7A7',
 };
-export default class extends React.PureComponent {
+export default class TreeGraph extends React.PureComponent {
   static defaultProps = {
     data: mockData,
     config: {
@@ -252,17 +256,19 @@ export default class extends React.PureComponent {
     },
   };
 
-  constructor(props) {
+  config: IObject = {};
+
+  graph: IObject = {};
+
+  constructor(props: Object) {
     super(props);
-    this.props = {
-      ...this.defaultProps,
+    this.config = {
+      ...TreeGraph.defaultProps,
       // ...(props || {})
     }
   }
 
-  refContainer = React.createRef({});
-
-  
+  refContainer = React.createRef();
 
   componentDidMount() {
     // 我们用 insert-css 演示引入自定义样式
@@ -271,7 +277,8 @@ export default class extends React.PureComponent {
 
     this.registerFn();
 
-    const { data } = this.props;
+    const { data = [] } = this.config;
+
     this.initGraph(data);
 
     if (typeof window !== 'undefined')
@@ -600,8 +607,11 @@ export default class extends React.PureComponent {
     if (typeof onInit === 'function') {
       onInit(this.graph);
     }
+
+    console.log(data)
     this.graph.data(data);
     this.graph.render();
+
     this.graph.zoom(config.defaultZoom || 1);
 
     const handleCollapse = (e) => {
