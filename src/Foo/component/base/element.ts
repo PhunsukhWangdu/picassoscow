@@ -1,6 +1,6 @@
 // import { IElement } from '../../interface';
 import Base from './base';
-import { IObject, IElement, ShapeAttrs, ICanvas, IGroup } from '../../interface';
+import { ICtor, IObject, IElement, ShapeAttrs, ICanvas, IGroup } from '../../interface';
 import UTIL from '../../../../util'
 
 const CLONE_CFGS = ['zIndex', 'capture', 'visible', 'type'];
@@ -84,6 +84,9 @@ abstract class Element extends Base implements IElement {
     this.set('_pause', { isPaused: false });
 
   }
+
+  // // element的添加有自己所基于的group
+  // abstract getGroupBase(): ICtor<IGroup>;
 
   /**
   * @protected

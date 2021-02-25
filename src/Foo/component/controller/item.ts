@@ -8,6 +8,7 @@ import {
   IGroup
 } from '../../interface';
 import Node from '../item/node';
+import Edge from '../item/edge';
 import UTIL from '../../../../util';
 
 const NODE = 'node';
@@ -32,7 +33,7 @@ class ItemController {
 
     const upperType = upperFirst(type); // Node
 
-    const parentGroup: IGroup = graph.get(`${type}Group`) || graph.get('group');
+    const parentGroup: IGroup = graph.get(`${type}Group`) || graph.get('group'); // graph[nodeGroup] graph[edgeGroup]
 
     // 获取 this.get('styles') 中的值
     let styles = graph.get(`${type}${upperFirst(STATE_SUFFIX)}`) || {}; // nodeStateStyles edgeStateStyles
@@ -44,7 +45,7 @@ class ItemController {
     const defaultModel = graph.get(`default${upperType}`); // defaultNode defaultEdge
     if (defaultModel) {
       UTIL.each(defaultModel, (val, key) => {
-        //defaultNode defaultEdge
+        // defaultNode defaultEdge属性覆盖data中配置
         model[key] = val;
       })
     }
@@ -52,6 +53,7 @@ class ItemController {
     let item;
 
     if (type === EDGE) {
+      // 画边
       let source: any = (model as EdgeConfig).source; // eslint-disable-line prefer-destructuring
       let target: any = (model as EdgeConfig).target; // eslint-disable-line prefer-destructuring
 
@@ -73,11 +75,10 @@ class ItemController {
         target,
         styles,
         linkCenter: graph.get('linkCenter'),
-        group: parentGroup.addGroup(),
+        group: parentGroup.addGroup(), // graph[nodeGroup] graph[edgeGroup] [children]中添加新创建的element
       });
 
     } else if (type === NODE) {
-
       item = new Node({
         model,
         styles: {},
@@ -85,12 +86,10 @@ class ItemController {
       })
     }
 
-    graph.get(`${type}s`).push(item); // nodes
+    graph.get(`${type}s`).push(item); // graph[nodes] graph[edges] 平铺存储
 
     graph.get('itemMap')[item.get('id')] = item;
-    // graph.emit('afteradditem', { item, model });
 
-    // eslint-disable-next-line consistent-return
     return item;
   }
 }

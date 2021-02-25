@@ -977,6 +977,9 @@ export type CanvasCfg = {
   [key: string]: any;
 };
 
+export interface ICtor<T> {
+  new (cfg: any): T;
+}
 
 export interface IObject {
   [key: string]: any;

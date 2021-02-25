@@ -29,6 +29,7 @@ export const ShapeFactoryBase = {
    * @return {Shape} 工具类
    */
   getShape(type?: string): ShapeOptions {
+    // type 注册的string
     const self = this as any;
     const shape = self[type!] || self[self.defaultShapeType] || self['simple-circle'];
     return shape;
@@ -41,8 +42,20 @@ export const ShapeFactoryBase = {
    * @return {IShape} 图形对象
    */
   draw(type: string, cfg: ModelConfig, group: IGroup): IElement {
+    // rect, cfg, group
     const shape = this.getShape(type);
-    const rst = shape.draw!(cfg, group);
+    // Node[circle] || Node['simple-circle'];
+    const rst = shape.drawShape!(cfg, group);
+    // drawShape(cfg: NodeConfig, group: IGroup): IShape {
+    //   const style = this.getShapeStyle!(cfg);
+    //   const keyShape: IShape = group.addShape('circle', {
+    //     attrs: style,
+    //     className: `${this.type}-keyShape`,
+    //     draggable: true,
+    //   });
+
+    //   return keyShape;
+    // },
     return rst;
   },
 };
@@ -53,12 +66,6 @@ export const ShapeFactoryBase = {
 const ShapeFramework = {
   // 默认样式及配置
   options: {},
-  /**
-   * 绘制
-   */
-  draw(cfg, group) {
-    return this.drawShape(cfg, group);
-  },
   /**
    * 绘制
    */

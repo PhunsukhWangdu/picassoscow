@@ -2,23 +2,35 @@ import {
   IGroup
 } from '../../interface';
 import BaseGroup from '../base/group';
+import * as Shape from './shape';
 
 class Group extends BaseGroup implements IGroup {
+
+  getShapeBase() {
+    return Shape;
+  }
 
   getGroupBase() {
     return Group; // Group自己也可以addGroup 选择基于自身的Group类addgroup
   }
 
-  // container中也有实现
-  addGroup(...args: any[]): IGroup {
-    const [groupClass] = args;
-    let group;
-    const tmpCfg = groupClass || {};
-    const TmpGroupClass = this.getGroupBase(); // avgcanvas自己实现group group.addGroup
-    group = new TmpGroupClass(tmpCfg);
+  isGroup() {
+    return true;
+  }
 
-    this.add(group); //添加前将子元素原本上层dom链清理
-    return group;
+  isEntityGroup() {
+    return false;
+  }
+
+  clone() {
+    const cloneGroup = super.clone();
+    // 获取构造函数
+    const children = this.get('children');
+    for (let i = 0; i < children.length; i++) {
+      const child = children[i];
+      cloneGroup.add(child.clone());
+    }
+    return cloneGroup;
   }
 }
 

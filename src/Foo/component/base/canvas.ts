@@ -4,6 +4,7 @@ import UTIL from '../../../../util';
 import Defs from '../Defs';
 import Group from './group';
 import Timeline from '../animate/timeline';
+import Container from './container';
 import { createSVGElement } from '../../../../util/dom';
 
 const PX_SUFFIX = 'px';
@@ -26,7 +27,7 @@ function setCanvas(element: IElement, canvas: ICanvas) {
   }
 }
 
-class BaseCanvas extends Element implements ICanvas {
+class BaseCanvas extends Container implements ICanvas {
   constructor(cfg: CanvasCfg) {
     super(cfg);
     this.initContainer();

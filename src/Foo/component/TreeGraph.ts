@@ -8,7 +8,7 @@ import {
   IGroup,
   ShapeStyle
 } from '../interface';
-import SVGCanvas from './SvgCanvas';
+import SVGCanvas from './svg/canvas';
 import Hierarchy from '@antv/hierarchy';
 import Base from './base/base';
 import ItemController from './controller/item';
@@ -50,74 +50,244 @@ export class TreeGraph extends Base implements IAbstractGraph {
   constructor(cfg: GraphOptions) {
     super();
     this.cfg = UTIL.deepMix(this.getDefaultCfg(), cfg);
+
     this.init();
 
-    const defaultNode = this.get('defaultNode');
-    if (!defaultNode) {
-      this.set('defaultNode', { type: 'circle' });
-    }
-    if (!defaultNode.type) {
-      defaultNode.type = 'circle';
-      this.set('defaultNode', defaultNode);
-    }
     this.destroyed = false;
 
     this.set('layoutMethod', this.getLayout());
   }
 
   protected init() {
-    this.initCanvas();
 
-    const itemController = new ItemController(this);
+    // 初始化canvas
+    this.initCanvas(); // graph[canvas]
 
-    this.set('itemController', itemController);
+    this.initGroups(); //graph[group nodeGroup, edgeGroup] graph[canvas][group]
 
-    this.initGroups();
+    const itemController = new ItemController(this); // 节点控制器
 
-    // // 初始化布局机制
-    // this.initLayoutController();
+    this.set('itemController', itemController); // graph[itemController]
 
-    // // 初始化事件机制
-    // this.initEventController();
-
-    // /** 初始化插件 */
-    // this.initPlugins();
   }
 
-   // 初始化所有 Group
-   protected initGroups(): void {
+  protected initCanvas() {
+    let container: string | HTMLElement | Element | null = this.get('container');
+
+    if (typeof container === 'string') {
+      container = document.getElementById(container);
+      this.set('container', container);
+    }
+
+    if (!container) {
+      throw new Error('invalid container');
+    }
+
+    const width: number = this.get('width');
+    const height: number = this.get('height');
+    const renderer: string = this.get('renderer');
+
+    let canvas;
+
+    canvas = new SVGCanvas({
+      container,
+      width,
+      height,
+    });
+
+    this.set('canvas', canvas);
+  }
+
+  // 初始化所有 Group
+  protected initGroups(): void {
     const canvas: ICanvas = this.get('canvas');
     const el: HTMLElement = this.get('canvas').get('el');
     const { id } = el;
 
+    // graph[canvas][children] = [group]
     const group: IGroup = canvas.addGroup({
       id: `${id}-root`,
       className: Global.rootContainerClassName,
     });
 
-    if (this.get('groupByTypes')) {
-      const edgeGroup: IGroup = group.addGroup({
-        id: `${id}-edge`,
-        className: Global.edgeContainerClassName,
-      });
-
-      const nodeGroup: IGroup = group.addGroup({
-        id: `${id}-node`,
-        className: Global.nodeContainerClassName,
-      });
-
-      this.set({ nodeGroup, edgeGroup });
-    }
-
-    const delegateGroup: IGroup = group.addGroup({
-      id: `${id}-delegate`,
-      className: Global.delegateContainerClassName,
+    // graph[canvas][children][group] = [nodeGroup, edgeGroup]
+    const edgeGroup: IGroup = group.addGroup({
+      id: `${id}-edge`,
+      className: Global.edgeContainerClassName,
     });
 
-    this.set({ delegateGroup });
+    const nodeGroup: IGroup = group.addGroup({
+      id: `${id}-node`,
+      className: Global.nodeContainerClassName,
+    });
+
+    this.set({ nodeGroup, edgeGroup }); // nodeGroup, edgeGroup
+
     this.set('group', group);
   }
 
+
+  public data(data?: GraphData | TreeGraphData): void {
+    this.set('data', data);
+  }
+
+  public render(): void {
+    const self = this;
+
+    const data: TreeGraphData = self.get('data');
+
+    if (!data) {
+      throw new Error('data must be defined first');
+    }
+
+    self.layout();
+  }
+
+  // 整体画布布局准备
+  public layout() {
+    const self = this;
+    const data: TreeGraphData = self.get('data');
+
+    const layoutMethod = self.get('layoutMethod');
+
+    // 布局算法为data增加x y
+    const layoutData = layoutMethod(data, self.get('layout'));
+
+    const animate: boolean = self.get('animate');
+
+    self.innerUpdateChild(layoutData, undefined, animate);
+
+    // const viewController = self.get('viewController');
+    // viewController.fitView();
+
+    self.paint();
+  }
+
+  private innerUpdateChild(data: TreeGraphData, parent: Item | undefined, animate: boolean) {
+    const self = this;
+    const current = self.findById(data.id);
+
+    // 若子树不存在，整体添加即可
+    if (!current) {
+      self.innerAddChild(data, parent, animate);
+      return;
+    }
+
+    // // 更新新节点下所有子节点
+    // each(data.children || [], (child: TreeGraphData) => {
+    //   self.innerUpdateChild(child, current, animate);
+    // });
+
+    // // 用现在节点的children实例来删除移除的子节点
+    // const children = current.get('children');
+    // if (children) {
+    //   const len = children.length;
+    //   if (len > 0) {
+    //     for (let i = children.length - 1; i >= 0; i--) {
+    //       const child = children[i].getModel();
+
+    //       if (TreeGraph.indexOfChild(data.children || [], child.id) === -1) {
+    //         self.innerRemoveChild(
+    //           child.id,
+    //           {
+    //             x: data.x!,
+    //             y: data.y!,
+    //           },
+    //           animate,
+    //         );
+
+    //         // 更新父节点下缓存的子节点 item 实例列表
+    //         children.splice(i, 1);
+    //       }
+    //     }
+    //   }
+    // }
+    // let oriX: number;
+    // let oriY: number;
+    // if (current.get('originAttrs')) {
+    //   oriX = current.get('originAttrs').x;
+    //   oriY = current.get('originAttrs').y;
+    // }
+    // const model = current.getModel();
+    // if (animate) {
+    //   // 如果有动画，先缓存节点运动再更新节点
+    //   current.set('originAttrs', {
+    //     x: model.x,
+    //     y: model.y,
+    //   });
+    // }
+    // current.set('model', data.data);
+    // if (oriX !== data.x || oriY !== data.y) {
+    //   current.updatePosition({ x: data.x, y: data.y });
+    // }
+  }
+
+  private innerAddChild(treeData: TreeGraphData, parent: Item | undefined, animate: boolean): Item {
+    const self = this;
+    const model = treeData.data;
+
+    if (model) {
+      // model 中应存储真实的数据，特别是真实的 children
+      model.x = treeData.x;
+      model.y = treeData.y;
+      model.depth = treeData.depth;
+    }
+
+    const node = self.itcrAddItem('node', model!);
+
+    // 根结点整体添加时不进入逻辑
+    // 从子节点找父节点之间的关系画边
+    if (parent) {
+      node.set('parent', parent);
+      // 为父组件添加children 为子节点添加父节点 相互关联
+      const childrenList = parent.get('children');
+      if (!childrenList) {
+        parent.set('children', [node]);
+      } else {
+        childrenList.push(node);
+      }
+      // 关联关系 画边
+      self.itcrAddItem(
+        'edge',
+        {
+          source: parent,
+          target: node,
+          id: `${parent.get('id')}:${node.get('id')}`,
+        },
+      );
+    }
+    // 渲染到视图上应参考布局的children, 避免多绘制了收起的节点
+    UTIL.each(treeData.children || [], (child) => {
+      self.innerAddChild(child, node, animate);
+    });
+    return node;
+  }
+
+  public itcrAddItem(
+    type: ITEM_TYPE, // 元素类型(node | edge)
+    model: ModelConfig, // {ModelConfig} model 元素数据模型
+  ) {
+    const itemController = this.get('itemController');
+
+    // g1 g12
+    if (model.id && this.findById(model.id as string)) {
+      console.warn(
+        `This item exists already. Be sure the id %c${model.id}%c is unique.`,
+        'font-size: 20px; color: red;',
+        '',
+      );
+      return;
+    }
+
+    let item;
+
+    // itemController控制器中增加node、edge
+    item = itemController.addItem(type, model);  // model = node->x、y... edge->source、target...
+
+    this.get('canvas').draw();
+
+    return item;
+  }
 
   // 每个节点的布局方式
   private getLayout() {
@@ -246,7 +416,9 @@ export class TreeGraph extends Base implements IAbstractGraph {
        * 若数据项为 { id: 'node', x: 100, y: 100, type: 'circle' }
        * 实际创建的节点模型是 { id: 'node', x: 100, y: 100， type: 'circle', size: [60, 40] }
        */
-      defaultNode: {},
+      defaultNode: {
+        type: 'circle'
+      },
       /**
        * 默认边配置，data 上定义的配置会覆盖这些配置。用法同 defaultNode
        */
@@ -306,55 +478,6 @@ export class TreeGraph extends Base implements IAbstractGraph {
     };
   }
 
-  protected initCanvas() {
-    let container: string | HTMLElement | Element | null = this.get('container');
-
-    if (typeof container === 'string') {
-      container = document.getElementById(container);
-      this.set('container', container);
-    }
-
-    if (!container) {
-      throw new Error('invalid container');
-    }
-
-    const width: number = this.get('width');
-    const height: number = this.get('height');
-    const renderer: string = this.get('renderer');
-
-    let canvas;
-
-    canvas = new SVGCanvas({
-      container,
-      width,
-      height,
-    });
-
-    this.set('canvas', canvas);
-  }
-
-  public data(data?: GraphData | TreeGraphData): void {
-    this.set('data', data);
-  }
-
-  public render(): void {
-    const self = this;
-
-    const data: TreeGraphData = self.get('data');
-
-    if (!data) {
-      throw new Error('data must be defined first');
-    }
-
-    self.clear();
-
-    // self.emit('beforerender');
-
-    self.layout(this.get('fitView'));
-
-    // self.emit('afterrender');
-  }
-
   public clear(): TreeGraph {
     const canvas: SVGCanvas = this.get('canvas');
 
@@ -363,45 +486,6 @@ export class TreeGraph extends Base implements IAbstractGraph {
     this.set({ itemMap: {}, nodes: [], edges: [], groups: [], combos: [], comboTrees: [] });
 
     return this;
-  }
-
-  // 整体画布布局准备
-  public layout(fitView?: boolean) {
-    const self = this;
-    const data: TreeGraphData = self.get('data');
-
-    const layoutMethod = self.get('layoutMethod');
-
-    const layoutData = layoutMethod(data, self.get('layout'));
-
-    const animate: boolean = self.get('animate');
-
-    // self.emit('beforerefreshlayout', { data, layoutData });
-    // self.emit('beforelayout');
-
-    self.innerUpdateChild(layoutData, undefined, animate);
-
-    if (fitView) {
-      const viewController = self.get('viewController');
-      viewController.fitView();
-    }
-
-    if (!animate) {
-      // 如果没有动画，目前仅更新了节点的位置，刷新一下边的样式
-      // self.refresh();
-      self.paint();
-    } else {
-      self.layoutAnimate(layoutData);
-    }
-
-    // self.emit('afterrefreshlayout', { data, layoutData });
-    // self.emit('afterlayout');
-  }
-
-  public paint(): void {
-    // this.emit('beforepaint');
-    this.get('canvas').draw();
-    // this.emit('afterpaint');
   }
 
   public layoutAnimate(
@@ -488,162 +572,8 @@ export class TreeGraph extends Base implements IAbstractGraph {
     );
   }
 
-  private innerUpdateChild(data: TreeGraphData, parent: Item | undefined, animate: boolean) {
-    const self = this;
-    const current = self.findById(data.id);
-
-    // 若子树不存在，整体添加即可
-    if (!current) {
-      self.innerAddChild(data, parent, animate);
-      return;
-    }
-
-    // // 更新新节点下所有子节点
-    // each(data.children || [], (child: TreeGraphData) => {
-    //   self.innerUpdateChild(child, current, animate);
-    // });
-
-    // // 用现在节点的children实例来删除移除的子节点
-    // const children = current.get('children');
-    // if (children) {
-    //   const len = children.length;
-    //   if (len > 0) {
-    //     for (let i = children.length - 1; i >= 0; i--) {
-    //       const child = children[i].getModel();
-
-    //       if (TreeGraph.indexOfChild(data.children || [], child.id) === -1) {
-    //         self.innerRemoveChild(
-    //           child.id,
-    //           {
-    //             x: data.x!,
-    //             y: data.y!,
-    //           },
-    //           animate,
-    //         );
-
-    //         // 更新父节点下缓存的子节点 item 实例列表
-    //         children.splice(i, 1);
-    //       }
-    //     }
-    //   }
-    // }
-    // let oriX: number;
-    // let oriY: number;
-    // if (current.get('originAttrs')) {
-    //   oriX = current.get('originAttrs').x;
-    //   oriY = current.get('originAttrs').y;
-    // }
-    // const model = current.getModel();
-    // if (animate) {
-    //   // 如果有动画，先缓存节点运动再更新节点
-    //   current.set('originAttrs', {
-    //     x: model.x,
-    //     y: model.y,
-    //   });
-    // }
-    // current.set('model', data.data);
-    // if (oriX !== data.x || oriY !== data.y) {
-    //   current.updatePosition({ x: data.x, y: data.y });
-    // }
-  }
-
-  /**
-   * 向🌲树中添加数据
-   * @param treeData 树图数据
-   * @param parent 父节点实例
-   * @param animate 是否开启动画
-   */
-  private innerAddChild(treeData: TreeGraphData, parent: Item | undefined, animate: boolean): Item {
-    const self = this;
-    const model = treeData.data;
-
-    if (model) {
-      // model 中应存储真实的数据，特别是真实的 children
-      model.x = treeData.x;
-      model.y = treeData.y;
-      model.depth = treeData.depth;
-    }
-
-    const node = self.addItem('node', model!, false);
-    if (parent) {
-      node.set('parent', parent);
-      // if (animate) {
-      //   const origin = parent.get('originAttrs');
-      //   if (origin) {
-      //     node.set('originAttrs', origin);
-      //   } else {
-      //     const parentModel = parent.getModel();
-      //     node.set('originAttrs', {
-      //       x: parentModel.x,
-      //       y: parentModel.y,
-      //     });
-      //   }
-      // }
-      // 为父组件添加children 关联关系 画边
-      const childrenList = parent.get('children');
-      if (!childrenList) {
-        parent.set('children', [node]);
-      } else {
-        childrenList.push(node);
-      }
-      self.addItem(
-        'edge',
-        {
-          source: parent,
-          target: node,
-          id: `${parent.get('id')}:${node.get('id')}`,
-        },
-        false,
-      );
-    }
-    // 渲染到视图上应参考布局的children, 避免多绘制了收起的节点
-    UTIL.each(treeData.children || [], (child) => {
-      self.innerAddChild(child, node, animate);
-    });
-
-    // elf.emit('afteraddchild', { item: node, parent });
-    return node;
-  }
-
   public findById(id: string): Item {
     return this.get('itemMap')[id];
-  }
-
-   /**
-   * 新增元素
-   * @param {ITEM_TYPE} type 元素类型(node | edge)
-   * @param {ModelConfig} model 元素数据模型
-   * @param {boolean} stack 本次操作是否入栈，默认为 true
-   * @param {boolean} sortCombo 本次操作是否需要更新 combo 层级顺序，内部参数，用户在外部使用 addItem 时始终时需要更新
-   * @return {Item} 元素实例
-   */
-  public addItem(
-    type: ITEM_TYPE,
-    model: ModelConfig,
-    stack: boolean = true,
-    sortCombo: boolean = true,
-  ) {
-    // const currentComboSorted = this.get('comboSorted');
-    // this.set('comboSorted', currentComboSorted && !sortCombo);
-    const itemController = this.get('itemController');
-
-    // g1 g12
-    if (model.id && this.findById(model.id as string)) {
-      console.warn(
-        `This item exists already. Be sure the id %c${model.id}%c is unique.`,
-        'font-size: 20px; color: red;',
-        '',
-      );
-      return;
-    }
-
-    let item;
-
-    item = itemController.addItem(type, model);  // model = node->x、y... edge->source、target...
-
-    this.paint();
-
-    return item;
   }
 
 }

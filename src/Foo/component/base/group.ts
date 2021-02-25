@@ -1,10 +1,10 @@
 import {
   IGroup
 } from '../../interface';
-import Element from './element';
+import Container from './container';
 
 // group实际上也是一个container 也可以addGroup等
-class Group extends Element implements IGroup {
+class Group extends Container implements IGroup {
 
   isGroup() {
     return true;

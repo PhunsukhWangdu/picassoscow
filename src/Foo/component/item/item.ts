@@ -1,7 +1,7 @@
 import { IGroup } from '@antv/g-base';
 import { each, isPlainObject, isString, isBoolean, mix, deepMix, clone } from '@antv/util';
 import { IItemBase, IItemBaseConfig } from '../../interface';
-import Shape from '../element/shape';
+import Shape from '../shape';
 import {
   IBBox,
   IPoint,
@@ -55,16 +55,17 @@ export default class ItemBase implements IItemBase {
       group.set('id', id);
     }
 
-    this.init();
+    this.initShapeFactory();
     this.draw();
 
     // shape的stateStyles作为styles
     const shapeType =
       (model.shape as string) ||
       (model.type as string) ||
-      (itemType === 'edge' ? 'line' : 'circle');
+      (itemType === 'edge' ? 'line' : 'circle'); // shapeType rect circle 等
 
-    const shapeFactory = this.get('shapeFactory');
+    const shapeFactory = this.get('shapeFactory'); // graph[shapeFactory]
+
     if (shapeFactory && shapeFactory[shapeType]) {
       const { options } = shapeFactory[shapeType];
       // merge the stateStyles from item and shape
@@ -100,7 +101,7 @@ export default class ItemBase implements IItemBase {
     }
   }
 
-  protected init() {
+  protected initShapeFactory() {
     const shapeFactory = Shape.getFactory(this.get('type')); // type 'node'
     this.set('shapeFactory', shapeFactory);
   }
@@ -176,9 +177,9 @@ export default class ItemBase implements IItemBase {
     self.updatePosition(model); // edge不需要更新x y
 
     const cfg = self.getShapeCfg(model); // 可能会附加额外信息
-    const shapeType = cfg.type as string;
+    const shapeType = cfg.type as string; // rect 
 
-    const keyShape: IShapeBase = shapeFactory.draw(shapeType, cfg, group);
+    const keyShape: IShapeBase = shapeFactory.draw(shapeType, cfg, group); // shapeFactory->nodeShapeFactory.draw
 
     if (keyShape) {
       self.set('keyShape', keyShape);
