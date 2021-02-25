@@ -1,6 +1,6 @@
-import EE from '../../../util/event-emitter';
-import { IObject } from '../interface';
-import UTIL from '../../../util';
+import EE from '../../../../util/event-emitter';
+import { IObject } from '../../interface';
+import UTIL from '../../../../util';
 
 abstract class Base extends EE {
   /**

@@ -2,15 +2,18 @@ import EventEmitter from '../../../util/event-emitter';
 import UTIL from '../../../util';
 import {
   Item, ITEM_TYPE, GraphOptions, GraphData, NodeConfig, EdgeConfig, ComboConfig, NodeMap, States, TreeGraphData,
-  ModelConfig
+  ModelConfig,
+  IAbstractGraph,
+  ICanvas,
+  IGroup,
+  ShapeStyle
 } from '../interface';
-import SVGCanvas from './SvgContainer';
+import SVGCanvas from './SvgCanvas';
 import Hierarchy from '@antv/hierarchy';
 import Base from './base/base';
-
-interface IAbstractGraph extends EventEmitter {
-
-}
+import ItemController from './controller/item';
+import { Particle } from 'babylonjs';
+import Global from '../global';
 
 export interface PrivateGraphOption extends GraphOptions {
   data: GraphData;
@@ -62,6 +65,61 @@ export class TreeGraph extends Base implements IAbstractGraph {
     this.set('layoutMethod', this.getLayout());
   }
 
+  protected init() {
+    this.initCanvas();
+
+    const itemController = new ItemController(this);
+
+    this.set('itemController', itemController);
+
+    this.initGroups();
+
+    // // 初始化布局机制
+    // this.initLayoutController();
+
+    // // 初始化事件机制
+    // this.initEventController();
+
+    // /** 初始化插件 */
+    // this.initPlugins();
+  }
+
+   // 初始化所有 Group
+   protected initGroups(): void {
+    const canvas: ICanvas = this.get('canvas');
+    const el: HTMLElement = this.get('canvas').get('el');
+    const { id } = el;
+
+    const group: IGroup = canvas.addGroup({
+      id: `${id}-root`,
+      className: Global.rootContainerClassName,
+    });
+
+    if (this.get('groupByTypes')) {
+      const edgeGroup: IGroup = group.addGroup({
+        id: `${id}-edge`,
+        className: Global.edgeContainerClassName,
+      });
+
+      const nodeGroup: IGroup = group.addGroup({
+        id: `${id}-node`,
+        className: Global.nodeContainerClassName,
+      });
+
+      this.set({ nodeGroup, edgeGroup });
+    }
+
+    const delegateGroup: IGroup = group.addGroup({
+      id: `${id}-delegate`,
+      className: Global.delegateContainerClassName,
+    });
+
+    this.set({ delegateGroup });
+    this.set('group', group);
+  }
+
+
+  // 每个节点的布局方式
   private getLayout() {
     const layout = this.get('layout');
     if (!layout) {
@@ -248,10 +306,6 @@ export class TreeGraph extends Base implements IAbstractGraph {
     };
   }
 
-  protected init() {
-    this.initCanvas();
-  }
-
   protected initCanvas() {
     let container: string | HTMLElement | Element | null = this.get('container');
 
@@ -277,15 +331,6 @@ export class TreeGraph extends Base implements IAbstractGraph {
     });
 
     this.set('canvas', canvas);
-  }
-
-  public add(
-    type: ITEM_TYPE,
-    model: ModelConfig,
-    stack: boolean = true,
-    sortCombo: boolean = true,
-  ): Item {
-    return this.addItem(type, model, stack, sortCombo);
   }
 
   public data(data?: GraphData | TreeGraphData): void {
@@ -320,6 +365,7 @@ export class TreeGraph extends Base implements IAbstractGraph {
     return this;
   }
 
+  // 整体画布布局准备
   public layout(fitView?: boolean) {
     const self = this;
     const data: TreeGraphData = self.get('data');
@@ -452,56 +498,152 @@ export class TreeGraph extends Base implements IAbstractGraph {
       return;
     }
 
-    // 更新新节点下所有子节点
-    each(data.children || [], (child: TreeGraphData) => {
-      self.innerUpdateChild(child, current, animate);
+    // // 更新新节点下所有子节点
+    // each(data.children || [], (child: TreeGraphData) => {
+    //   self.innerUpdateChild(child, current, animate);
+    // });
+
+    // // 用现在节点的children实例来删除移除的子节点
+    // const children = current.get('children');
+    // if (children) {
+    //   const len = children.length;
+    //   if (len > 0) {
+    //     for (let i = children.length - 1; i >= 0; i--) {
+    //       const child = children[i].getModel();
+
+    //       if (TreeGraph.indexOfChild(data.children || [], child.id) === -1) {
+    //         self.innerRemoveChild(
+    //           child.id,
+    //           {
+    //             x: data.x!,
+    //             y: data.y!,
+    //           },
+    //           animate,
+    //         );
+
+    //         // 更新父节点下缓存的子节点 item 实例列表
+    //         children.splice(i, 1);
+    //       }
+    //     }
+    //   }
+    // }
+    // let oriX: number;
+    // let oriY: number;
+    // if (current.get('originAttrs')) {
+    //   oriX = current.get('originAttrs').x;
+    //   oriY = current.get('originAttrs').y;
+    // }
+    // const model = current.getModel();
+    // if (animate) {
+    //   // 如果有动画，先缓存节点运动再更新节点
+    //   current.set('originAttrs', {
+    //     x: model.x,
+    //     y: model.y,
+    //   });
+    // }
+    // current.set('model', data.data);
+    // if (oriX !== data.x || oriY !== data.y) {
+    //   current.updatePosition({ x: data.x, y: data.y });
+    // }
+  }
+
+  /**
+   * 向🌲树中添加数据
+   * @param treeData 树图数据
+   * @param parent 父节点实例
+   * @param animate 是否开启动画
+   */
+  private innerAddChild(treeData: TreeGraphData, parent: Item | undefined, animate: boolean): Item {
+    const self = this;
+    const model = treeData.data;
+
+    if (model) {
+      // model 中应存储真实的数据，特别是真实的 children
+      model.x = treeData.x;
+      model.y = treeData.y;
+      model.depth = treeData.depth;
+    }
+
+    const node = self.addItem('node', model!, false);
+    if (parent) {
+      node.set('parent', parent);
+      // if (animate) {
+      //   const origin = parent.get('originAttrs');
+      //   if (origin) {
+      //     node.set('originAttrs', origin);
+      //   } else {
+      //     const parentModel = parent.getModel();
+      //     node.set('originAttrs', {
+      //       x: parentModel.x,
+      //       y: parentModel.y,
+      //     });
+      //   }
+      // }
+      // 为父组件添加children 关联关系 画边
+      const childrenList = parent.get('children');
+      if (!childrenList) {
+        parent.set('children', [node]);
+      } else {
+        childrenList.push(node);
+      }
+      self.addItem(
+        'edge',
+        {
+          source: parent,
+          target: node,
+          id: `${parent.get('id')}:${node.get('id')}`,
+        },
+        false,
+      );
+    }
+    // 渲染到视图上应参考布局的children, 避免多绘制了收起的节点
+    UTIL.each(treeData.children || [], (child) => {
+      self.innerAddChild(child, node, animate);
     });
 
-    // 用现在节点的children实例来删除移除的子节点
-    const children = current.get('children');
-    if (children) {
-      const len = children.length;
-      if (len > 0) {
-        for (let i = children.length - 1; i >= 0; i--) {
-          const child = children[i].getModel();
-
-          if (TreeGraph.indexOfChild(data.children || [], child.id) === -1) {
-            self.innerRemoveChild(
-              child.id,
-              {
-                x: data.x!,
-                y: data.y!,
-              },
-              animate,
-            );
-
-            // 更新父节点下缓存的子节点 item 实例列表
-            children.splice(i, 1);
-          }
-        }
-      }
-    }
-    let oriX: number;
-    let oriY: number;
-    if (current.get('originAttrs')) {
-      oriX = current.get('originAttrs').x;
-      oriY = current.get('originAttrs').y;
-    }
-    const model = current.getModel();
-    if (animate) {
-      // 如果有动画，先缓存节点运动再更新节点
-      current.set('originAttrs', {
-        x: model.x,
-        y: model.y,
-      });
-    }
-    current.set('model', data.data);
-    if (oriX !== data.x || oriY !== data.y) {
-      current.updatePosition({ x: data.x, y: data.y });
-    }
+    // elf.emit('afteraddchild', { item: node, parent });
+    return node;
   }
 
   public findById(id: string): Item {
     return this.get('itemMap')[id];
   }
+
+   /**
+   * 新增元素
+   * @param {ITEM_TYPE} type 元素类型(node | edge)
+   * @param {ModelConfig} model 元素数据模型
+   * @param {boolean} stack 本次操作是否入栈，默认为 true
+   * @param {boolean} sortCombo 本次操作是否需要更新 combo 层级顺序，内部参数，用户在外部使用 addItem 时始终时需要更新
+   * @return {Item} 元素实例
+   */
+  public addItem(
+    type: ITEM_TYPE,
+    model: ModelConfig,
+    stack: boolean = true,
+    sortCombo: boolean = true,
+  ) {
+    // const currentComboSorted = this.get('comboSorted');
+    // this.set('comboSorted', currentComboSorted && !sortCombo);
+    const itemController = this.get('itemController');
+
+    // g1 g12
+    if (model.id && this.findById(model.id as string)) {
+      console.warn(
+        `This item exists already. Be sure the id %c${model.id}%c is unique.`,
+        'font-size: 20px; color: red;',
+        '',
+      );
+      return;
+    }
+
+    let item;
+
+    item = itemController.addItem(type, model);  // model = node->x、y... edge->source、target...
+
+    this.paint();
+
+    return item;
+  }
+
 }

@@ -334,7 +334,7 @@ export default class TreeGraph extends React.PureComponent {
             textBaseline: 'bottom',
           };
 
-          const rect = group.addShape('rect', {
+          const rect = group!.addShape('rect', {
             attrs: {
               x: nodeOrigin.x,
               y: nodeOrigin.y,
@@ -345,7 +345,7 @@ export default class TreeGraph extends React.PureComponent {
           const rectBBox = rect.getBBox();
 
           // label title
-          group.addShape('text', {
+          group!.addShape('text', {
             attrs: {
               ...textConfig,
               x: 12 + nodeOrigin.x,

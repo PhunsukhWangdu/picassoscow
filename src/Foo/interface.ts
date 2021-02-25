@@ -1,13 +1,11 @@
+import { Particle } from "babylonjs";
+import { ClassType } from "react";
 
 // Node Edge Combo 实例
 export type Item = INode | IEdge | ICombo;
 
 export interface States {
   [key: string]: INode[];
-}
-
-export interface Indexable<T> {
-  [key: string]: T;
 }
 
 // item 的配置项
@@ -30,7 +28,7 @@ export type IItemBaseConfig = Partial<{
   /**
    * G Group
    */
-  // group: IGroup;
+  group: IGroup;
 
   /**
    * is open animate
@@ -69,10 +67,77 @@ export type IItemBaseConfig = Partial<{
   target: string | Item;
 
   linkCenter: boolean;
-}> &
-  Indexable<any>;
+}> & {
+  [key: string]: any;
+};
 
 export type ITEM_TYPE = 'node' | 'edge' | 'combo' | 'vedge';
+/**
+ * @interface IObservable
+ * 可以绑定事件的接口
+ */
+export interface IObservable {
+  /**
+   * 绑定事件
+   * @param  eventName 事件名
+   * @param callback  回调函数
+   */
+  on(eventName: string, callback: Function): void;
+  /**
+   * 移除事件
+   */
+  off(): void;
+  /**
+   * 移除事件
+   * @param eventName 事件名
+   */
+  off(eventName: string): void;
+  /**
+   * 移除事件
+   * @param eventName 事件名
+   * @param callback  回调函数
+   */
+  off(eventName: string, callback: Function): void;
+  /**
+   * 触发事件, trigger 的别名函数
+   * @param eventName 事件名称
+   * @param eventObject 参数
+   */
+  emit(eventName: string, eventObject: object): void;
+
+  getEvents(): any;
+}
+
+/**
+ * @interface IBase
+ * 所有图形类公共的接口，提供 get,set 方法
+ */
+export interface IBase extends IObservable {
+  cfg: IObject;
+  /**
+   * 获取属性值
+   * @param  {string} name 属性名
+   * @return {any} 属性值
+   */
+  get(name: string): any;
+  /**
+   * 设置属性值
+   * @param {string} name  属性名称
+   * @param {any}    value 属性值
+   */
+  set(name: string, value: any): void;
+
+  /**
+   * 是否销毁
+   * @type {boolean}
+   */
+  destroyed: boolean;
+
+  /**
+   * 销毁对象
+   */
+  destroy(): void;
+}
 
 export interface IItemBase {
   _cfg: IItemBaseConfig | null;
@@ -143,6 +208,9 @@ export interface IItemBase {
    */
   getID: () => string;
 
+  /**
+   * 获取 图形 的配置项
+   */
   getShapeCfg: (model: ModelConfig) => ModelConfig;
 
   /**
@@ -297,69 +365,70 @@ export interface IEdge extends IItemBase {
 }
 
 export interface INode extends IItemBase {
-  /**
-   * 获取从节点关联的所有边
-   * @return {Array} 边的集合
-   */
-  getEdges: () => IEdge[];
+  // /**
+  //  * 获取从节点关联的所有边
+  //  * @return {Array} 边的集合
+  //  */
+  // getEdges: () => IEdge[];
 
-  /**
-   * 获取引入节点的边 target == this
-   * @return {Array} 边的集合
-   */
-  getInEdges: () => IEdge[];
+  // /**
+  //  * 获取引入节点的边 target == this
+  //  * @return {Array} 边的集合
+  //  */
+  // getInEdges: () => IEdge[];
 
-  /**
-   * 获取从节点引出的边 source == this
-   * @return {Array} 边的集合
-   */
-  getOutEdges: () => IEdge[];
+  // /**
+  //  * 获取从节点引出的边 source == this
+  //  * @return {Array} 边的集合
+  //  */
+  // getOutEdges: () => IEdge[];
 
-  /**
-   * 根据锚点的索引获取连接点
-   * @param  {Number} index 索引
-   * @return {Object} 连接点 {x,y}
-   */
-  getLinkPointByAnchor: (index: number) => IPoint;
+  // /**
+  //  * 根据锚点的索引获取连接点
+  //  * @param  {Number} index 索引
+  //  * @return {Object} 连接点 {x,y}
+  //  */
+  // getLinkPointByAnchor: (index: number) => IPoint;
 
-  /**
-   * 获取连接点
-   * @param {Object} point 节点外面的一个点，用于计算交点、最近的锚点
-   * @return {Object} 连接点 {x,y}
-   */
-  getLinkPoint: (point: IPoint) => IPoint | null;
+  // /**
+  //  * 获取连接点
+  //  * @param {Object} point 节点外面的一个点，用于计算交点、最近的锚点
+  //  * @return {Object} 连接点 {x,y}
+  //  */
+  // getLinkPoint: (point: IPoint) => IPoint | null;
 
-  /**
-   * 添加边
-   * @param {Edge} edge 边
-   */
-  addEdge: (edge: IEdge) => void;
+  // /**
+  //  * 添加边
+  //  * @param {Edge} edge 边
+  //  */
+  // addEdge: (edge: IEdge) => void;
 
-  /**
-   * 移除边
-   * @param {Edge} edge 边
-   */
-  removeEdge: (edge: IEdge) => void;
+  // /**
+  //  * 移除边
+  //  * @param {Edge} edge 边
+  //  */
+  // removeEdge: (edge: IEdge) => void;
 
-  /**
-   * 获取锚点的定义
-   * @return {array} anchorPoints， {x,y,...cfg}
-   */
-  getAnchorPoints: () => IPoint[] | number[][];
+  // /**
+  //  * 获取锚点的定义
+  //  * @return {array} anchorPoints， {x,y,...cfg}
+  //  */
+  // getAnchorPoints: () => IPoint[] | number[][];
 
-  hasLocked: () => boolean;
+  // hasLocked: () => boolean;
 
-  lock: () => void;
+  // lock: () => void;
 
-  unlock: () => void;
+  // unlock: () => void;
 
-  /**
-   * 获取节点所有的邻居节点
-   *
-   * @returns {INode[]}
-   * @memberof INode
-   */
-  getNeighbors: (type?: 'source' | 'target' | undefined) => INode[];
+  // /**
+  //  * 获取节点所有的邻居节点
+  //  *
+  //  * @returns {INode[]}
+  //  * @memberof INode
+  //  */
+  // getNeighbors: (type?: 'source' | 'target' | undefined) => INode[];
+  [key: string]: any;
 }
 
 export interface NodeMap {
@@ -438,10 +507,10 @@ export interface TreeGraphData {
   depth?: number;
   collapsed?: boolean;
   style?:
-    | ShapeStyle
-    | {
-        [key: string]: ShapeStyle;
-      };
+  | ShapeStyle
+  | {
+    [key: string]: ShapeStyle;
+  };
   stateStyles?: StateStyles;
   [key: string]: unknown;
 }
@@ -532,8 +601,8 @@ export type LoopConfig = Partial<{
 
 export interface EdgeConfig extends ModelConfig {
   id?: string;
-  source?: string;
-  target?: string;
+  source?: string | IElement;
+  target?: string | IElement;
   sourceNode?: Node;
   targetNode?: Node;
   startPoint?: IPoint;
@@ -681,10 +750,10 @@ export type ShapeStyle = Partial<{
 
 export interface StateStyles {
   [key: string]:
-    | ShapeStyle
-    | {
-        [key: string]: ShapeStyle;
-      };
+  | ShapeStyle
+  | {
+    [key: string]: ShapeStyle;
+  };
 }
 
 export type ModelStyle = Partial<{
@@ -797,7 +866,7 @@ export interface GraphOptions {
     size: number | number[];
     color: string;
   }> &
-    ModelStyle;
+  ModelStyle;
 
   /**
    * 默认状态下边的配置，比如 type, size, color。会被写入的 data 覆盖。
@@ -807,7 +876,7 @@ export interface GraphOptions {
     size: number | number[];
     color: string;
   }> &
-    ModelStyle;
+  ModelStyle;
 
   /**
    * Combo 默认配置
@@ -817,7 +886,7 @@ export interface GraphOptions {
     size: number | number[];
     color: string;
   }> &
-    ModelStyle;
+  ModelStyle;
 
   nodeStateStyles?: StateStyles;
 
@@ -912,3 +981,145 @@ export type CanvasCfg = {
 export interface IObject {
   [key: string]: any;
 }
+
+export interface IAbstractGraph {
+  getDefaultCfg: () => Partial<GraphOptions>;
+  get: <T = any>(key: string) => T;
+  set: <T = any>(key: string | object, value?: T) => any;
+  findById: (id: string) => Item | null;
+  translate?: (dx: number, dy: number) => void;
+  // zoom: (ratio: number, center?: Point) => void;
+  [key: string]: any,
+}
+
+export type ShapeOptions = Partial<{
+  shapeType: string;
+  [key: string]: any;
+}>
+export interface IGroup {
+  [key: string]: any;
+}
+export interface IElement extends IBase {
+  /**
+   * 复制对象
+   */
+  clone(): IElement;
+  /**
+  * 执行动画
+  * @param {ElementAttrs} toAttrs 动画最终状态
+  * @param {number}       duration 动画执行时间
+  * @param {string}       easing 动画缓动效果
+  * @param {function}     callback 动画执行后的回调
+  * @param {number}       delay 动画延迟时间
+  */
+  animate(toAttrs: IObject, duration: number, easing?: string, callback?: Function, delay?: number): any;
+
+  /**
+   * 获取所属的 Canvas
+   * @return {ICanvas} Canvas 对象
+   */
+  getCanvas(): ICanvas;
+
+  /**
+   * 获取父元素
+   * @return {IContainer} 父元素一般是 Group 或者是 Canvas
+   */
+  getParent(): ICanvas | IGroup;
+
+  [key: string]: any;
+}
+
+
+export interface ICanvas extends IElement {
+  draw(): void;
+  /**
+   * 添加图形分组，并设置配置项
+   * @param {GroupCfg} cfg 图形分组的配置项
+   * @returns 添加的图形分组
+   */
+  addGroup(cfg: IObject): IGroup;
+  /**
+   * 获取所有的子元素
+   * @return {IElement[]} 子元素的集合
+   */
+  getChildren(): IElement[];
+  /**
+   * 移除对应子元素
+   * @param {IElement} element 子元素
+   * @param {boolean} destroy 是否销毁子元素，默认为 true
+   */
+  removeChild(element: IElement, destroy?: boolean): void;
+
+  /**
+   * 从父元素中移除
+   * @param {boolean} destroy 是否同时销毁
+   */
+  remove(destroy?: boolean): void;
+
+}
+
+
+
+type ColorType = string | null;
+
+export type ShapeAttrs = {
+  /** x 坐标 */
+  x?: number;
+  /** y 坐标 */
+  y?: number;
+  /** 圆半径 */
+  r?: number;
+  /** 描边颜色 */
+  stroke?: ColorType;
+  /** 描边透明度 */
+  strokeOpacity?: number;
+  /** 填充颜色 */
+  fill?: ColorType;
+  /** 填充透明度 */
+  fillOpacity?: number;
+  /** 整体透明度 */
+  opacity?: number;
+  /** 线宽 */
+  lineWidth?: number;
+  /** 指定如何绘制每一条线段末端 */
+  lineCap?: 'butt' | 'round' | 'square';
+  /** 用来设置2个长度不为0的相连部分（线段，圆弧，曲线）如何连接在一起的属性（长度为0的变形部分，其指定的末端和控制点在同一位置，会被忽略） */
+  lineJoin?: 'bevel' | 'round' | 'miter';
+  /**
+   * 设置线的虚线样式，可以指定一个数组。一组描述交替绘制线段和间距（坐标空间单位）长度的数字。 如果数组元素的数量是奇数， 数组的元素会被复制并重复。例如， [5, 15, 25] 会变成 [5, 15, 25, 5, 15, 25]。这个属性取决于浏览器是否支持 setLineDash() 函数。
+   */
+  lineDash?: number[] | null;
+  /** Path 路径 */
+  path?: string | object[];
+  /** 图形坐标点 */
+  points?: object[];
+  /** 宽度 */
+  width?: number;
+  /** 高度 */
+  height?: number;
+  /** 阴影模糊效果程度 */
+  shadowBlur?: number;
+  /** 阴影颜色 */
+  shadowColor?: ColorType;
+  /** 阴影 x 方向偏移量 */
+  shadowOffsetX?: number;
+  /** 阴影 y 方向偏移量 */
+  shadowOffsetY?: number;
+  /** 设置文本内容的当前对齐方式 */
+  textAlign?: 'start' | 'center' | 'end' | 'left' | 'right';
+  /** 设置在绘制文本时使用的当前文本基线 */
+  textBaseline?: 'top' | 'hanging' | 'middle' | 'alphabetic' | 'ideographic' | 'bottom';
+  /** 字体样式 */
+  fontStyle?: 'normal' | 'italic' | 'oblique';
+  /** 文本字体大小 */
+  fontSize?: number;
+  /** 文本字体 */
+  fontFamily?: string;
+  /** 文本粗细 */
+  fontWeight?: 'normal' | 'bold' | 'bolder' | 'lighter' | number;
+  /** 字体变体 */
+  fontVariant?: 'normal' | 'small-caps' | string;
+  /** 文本行高 */
+  lineHeight?: number;
+  [key: string]: any;
+};
