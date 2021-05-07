@@ -410,7 +410,7 @@ export default class TreeGraph extends React.PureComponent {
               fill: colors[status],
             },
           });
-
+u
           // variable name
           group.addShape('text', {
             attrs: {

@@ -27,12 +27,11 @@ function setCanvas(element: IElement, canvas: ICanvas) {
   }
 }
 
-class BaseCanvas extends Container implements ICanvas {
+abstract class BaseCanvas extends Container implements ICanvas {
   constructor(cfg: CanvasCfg) {
     super(cfg);
     this.initContainer();
     this.initDom();
-    this.initTimeline();
   }
 
   initContainer() {
@@ -56,20 +55,11 @@ class BaseCanvas extends Container implements ICanvas {
     this.setDOMSize(this.get('width'), this.get('height'));
   }
 
-  initTimeline() {
-    const timeline = new Timeline(this);
-    this.set('timeline', timeline);
-  }
-
-  createDom() {
-    const element = createSVGElement('svg') as SVGSVGElement;
-    const context = new Defs(element);
-    element.setAttribute('width', `${this.get('width')}`);
-    element.setAttribute('height', `${this.get('height')}`);
-    // 缓存 context 对象
-    this.set('context', context);
-    return element;
-  }
+  /**
+  * 创建画布容器
+  * @return {HTMLElement} 画布容器
+  */
+  abstract createDom(): HTMLElement | SVGSVGElement;
 
   setDOMSize(width: number, height: number) {
     const el = this.get('el');
@@ -93,18 +83,6 @@ class BaseCanvas extends Container implements ICanvas {
 
   getGroupBase() {
     return Group;
-  }
-
-  // 具体group的实现类 通过getGroupBase提供自组件覆盖的入口
-  addGroup(...args: any[]): IGroup {
-    const [groupClass] = args;
-    let group;
-    const tmpCfg = groupClass || {};
-    const TmpGroupClass = this.getGroupBase(); // avgcanvas自己实现group
-    group = new TmpGroupClass(tmpCfg); // new SvgGroup({ id, className })
-
-    this.add(group); //添加前将子元素原本上层dom链清理
-    return group;
   }
 
   add(element: IElement) {
@@ -159,7 +137,7 @@ class BaseCanvas extends Container implements ICanvas {
    * @param {string} id 元素 id
    * @return {IElement|null} 元素
    */
-  findById(id: string): IElement | null{
+  findById(id: string): IElement | null {
     return this.find((element: IElement) => {
       return element.get('id') === id;
     });
@@ -170,7 +148,7 @@ class BaseCanvas extends Container implements ICanvas {
    * @param  fn    匹配函数
    * @return {IElement|null} 元素，可以为空
    */
-  find(fn: (v:IElement) => boolean): IElement | null {
+  find(fn: (v: IElement) => boolean): IElement | null {
     let rst: IElement | null = null;
     const children = this.getChildren();
     UTIL.each(children, (element: IElement) => {

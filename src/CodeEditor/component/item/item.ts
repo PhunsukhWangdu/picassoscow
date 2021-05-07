@@ -171,7 +171,7 @@ export default class ItemBase implements IItemBase {
   draw() {
     const self = this;
     const shapeFactory = self.get('shapeFactory');
-    const group: IGroup = self.get('group');
+    const group: IGroup = self.get('group'); // graph[canvas][edgeGroup][children]
     const model: ModelConfig = self.get('model'); // data
 
     self.updatePosition(model); // edge不需要更新x y

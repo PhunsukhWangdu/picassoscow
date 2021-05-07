@@ -12,6 +12,16 @@ class SvgCanvas extends Canvas implements ICanvas{
     super(cfg);
   }
 
+  createDom() {
+    const element = createSVGElement('svg') as SVGSVGElement;
+    const context = new Defs(element);
+    element.setAttribute('width', `${this.get('width')}`);
+    element.setAttribute('height', `${this.get('height')}`);
+    // 缓存 context 对象
+    this.set('context', context);
+    return element;
+  }
+
   getGroupBase() {
     return Group;
   }
